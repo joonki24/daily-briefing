@@ -5,7 +5,7 @@
  * @returns {{ dateStr: string, hour: string, weekday: number }}
  * dateStr: "YYYYMMDD", hour: "00"~"23", weekday: 0(일)~6(토)
  */
-export function nowInKST() {
+export function nowInKST(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -14,7 +14,7 @@ export function nowInKST() {
     hour: "2-digit",
     hour12: false,
     weekday: "short",
-  }).formatToParts(new Date());
+  }).formatToParts(date);
   const get = (t) => parts.find((p) => p.type === t)?.value;
 
   const WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };

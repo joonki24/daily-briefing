@@ -5,6 +5,8 @@ import { getDepartureWeatherBrief } from "./services/weather.js";
 import { getLatestRadarImageUrl } from "./services/radarImage.js";
 import { runMorningJob, runEveningJob } from "./scheduler.js";
 import { readRecentRuns, logRun } from "./utils/runLog.js";
+import { BRIEF_NAMES, loadBrief } from "./utils/briefStore.js";
+import { nowInKST } from "./utils/kst.js";
 
 export function createServer() {
   const app = express();
@@ -28,6 +30,29 @@ export function createServer() {
   app.get("/logs", (req, res) => {
     const limit = Number(req.query.limit) || 20;
     res.json({ ok: true, runs: readRecentRuns(limit) });
+  });
+
+  /**
+   * 스케줄 잡이 만들어 둔 "가장 최근 브리핑"을 돌려준다 (name: morning | evening).
+   * 폰 단축어의 "자동화"가 정해진 시각에 이걸 가져와 알림으로 띄운다 — ntfy 앱이 필요 없다.
+   * 요청 때마다 새로 만들지 않고 저장본을 주므로 응답이 즉시 오고, 가족이 몇 명이 써도 AI 호출 비용이 늘지 않는다.
+   */
+  app.get("/brief/:name", (req, res) => {
+    const { name } = req.params;
+    if (!BRIEF_NAMES.includes(name)) {
+      return res.status(404).json({ ok: false, error: `${BRIEF_NAMES.join(" 또는 ")}만 가능합니다.` });
+    }
+    const brief = loadBrief(name);
+    if (!brief) {
+      return res.status(404).json({ ok: false, error: "아직 생성된 브리핑이 없습니다." });
+    }
+
+    // 오늘(KST) 만든 게 아니면(서버가 꺼져 있었던 경우 등) 오래된 내용이라고 맨 앞에 표시한다.
+    const stale = nowInKST(new Date(brief.generatedAt)).dateStr !== nowInKST().dateStr;
+    const message = stale ? `⚠️ 오늘 브리핑이 아직 만들어지지 않아 이전 내용입니다.
+
+${brief.message}` : brief.message;
+    res.json({ ok: brief.ok, title: brief.title, message, generatedAt: brief.generatedAt, stale });
   });
 
   /**
