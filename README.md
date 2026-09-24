@@ -68,8 +68,8 @@ node src/index.js
 
 ```
 [server] http://localhost:3000 에서 대기 중
-[scheduler] 아침 브리핑 등록: 매일 09:00 (Asia/Seoul)
-[scheduler] 저녁 브리핑 등록: 매일 19:00 (Asia/Seoul)
+[scheduler] 아침 브리핑 등록: 매일 08:55 (Asia/Seoul)
+[scheduler] 저녁 브리핑 등록: 매일 18:55 (Asia/Seoul)
 ```
 
 > 처음 실행할 때 `browserType.launch: Executable doesn't exist ...` 같은 오류가 나면
@@ -171,7 +171,7 @@ curl -X POST localhost:3000/test/evening
 
 ### (B) 아침/저녁 브리핑 — ntfy 앱 없이 단축어 "자동화"로 받기 (가족 배포용 기본 방식)
 
-서버는 config.json에 정한 시각(아침 09:00 / 저녁 19:00)에 브리핑을 **만들어서 저장**해둡니다.
+서버는 config.json에 정한 시각(아침 08:55 / 저녁 18:55 — 폰 자동화가 09:00·19:00에 받아볼 수 있게 5분 일찍)에 브리핑을 **만들어서 저장**해둡니다.
 폰은 그 뒤에 저장본을 **가져와서 알림으로 띄우기만** 하면 됩니다. 요청 때마다 새로 만들지 않으니
 응답이 즉시 오고, 가족이 몇 명이 써도 AI 호출 비용이 늘지 않습니다.
 

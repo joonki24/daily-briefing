@@ -3,13 +3,13 @@
 
   "morning": {
     "enabled": true,
-    "time": "09:00",
+    "time": "08:55",
     "_설명": "매일 이 시각(HH:mm, 위 timezone 기준)에 미국 증시 요약을 자동 발송합니다."
   },
 
   "evening": {
     "enabled": true,
-    "time": "19:00",
+    "time": "18:55",
     "_설명": "매일 이 시각에 국내 뉴스 요약을 자동 발송합니다."
   },
 
