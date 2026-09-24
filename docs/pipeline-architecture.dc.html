@@ -372,24 +372,19 @@ body{margin:0;background:oklch(96% 0.008 70);}
   </div>
 
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-left:12px;">
-    <div style="font-size:10.5px;color:oklch(45% 0.08 250);background:oklch(93% 0.02 250);border-radius:12px;padding:4px 9px;white-space:nowrap;">설계됨 · 미구현</div>
+    <div style="font-size:10.5px;color:oklch(45% 0.01 60);background:oklch(93% 0.008 60);border-radius:12px;padding:4px 9px;white-space:nowrap;">비/눈 예보 시</div>
     <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="width:150px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:8px 10px;text-align:center;">
-      <div style="font-size:12.5px;font-weight:600;">비/눈 예보 시</div>
-      <div style="font-size:10px;color:oklch(45% 0.08 250);margin-top:2px;">날씨 포맷팅 단계에서 판단</div>
+    <div style="width:170px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:8px 10px;text-align:center;">
+      <div style="font-size:12.5px;font-weight:600;">레이더영상 API</div>
+      <div style="font-size:10px;color:oklch(48% 0.01 60);margin-top:2px;">목록 조회만 키 필요</div>
     </div>
     <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="width:170px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:8px 10px;text-align:center;">
-      <div style="font-size:12.5px;font-weight:600;">공공데이터포털 레이더영상 API</div>
-      <div style="font-size:10px;color:oklch(45% 0.08 250);margin-top:2px;">서버가 대신 조회(키 노출 방지)</div>
-    </div>
-    <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="width:190px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:8px 10px;text-align:center;">
-      <div style="font-size:12.5px;font-weight:600;">GET /depart/radar-image (신규)</div>
-      <div style="font-size:10px;color:oklch(45% 0.08 250);margin-top:2px;">단축어가 이 URL로 이미지 표시</div>
+    <div style="width:190px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:8px 10px;text-align:center;">
+      <div style="font-size:12.5px;font-weight:600;">/depart 응답에 radarImageUrl 포함</div>
+      <div style="font-size:10px;color:oklch(48% 0.01 60);margin-top:2px;">이미지 자체는 키 없이 공개 접근</div>
     </div>
   </div>
-  <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:16px;">확정 · 경로/날씨 중 하나만 성공해도 부분 응답 발송 (완전 실패보다 낫다는 판단) · 미확정 · ODsay 캐싱 전략(현재 무캐싱 운용) · 신규(미구현) · 비/눈 예보 시 기상청 레이더 이미지를 서버가 프록시해서 단축어에 URL로 전달 — 공공데이터포털 "레이더영상 조회서비스"는 파일명 목록→실제 이미지 2단계 구조로 보이는데, 실제 키로 호출해서 정확한 메커니즘 검증 필요</div>
+  <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:16px;">확정 · 경로/날씨 중 하나만 성공해도 부분 응답 발송 (완전 실패보다 낫다는 판단) · 미확정 · ODsay 캐싱 전략(현재 무캐싱 운용) · 레이더 이미지 URL이 http라 iOS ATS에 막히는지 실제 단축어에서 확인 필요</div>
 
 </div>
 

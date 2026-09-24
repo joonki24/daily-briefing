@@ -144,7 +144,10 @@ export async function getDepartureWeatherBrief(lat, lon, placeLabel, departureHH
 
 function formatWeatherBrief(placeLabel, relevant) {
   if (relevant.length === 0) {
-    return `${placeLabel} 지역의 남은 시간대 예보 데이터가 없습니다 (이미 자정에 가까운 시각일 수 있음).`;
+    return {
+      brief: `${placeLabel} 지역의 남은 시간대 예보 데이터가 없습니다 (이미 자정에 가까운 시각일 수 있음).`,
+      hasPrecipitation: false,
+    };
   }
 
   const rainRow = relevant.find((r) => Number(r.PTY) !== 0);
@@ -160,7 +163,9 @@ function formatWeatherBrief(placeLabel, relevant) {
   const skyLabel = rainRow ? undefined : SKY_LABEL[Number(relevant[0]?.SKY)];
   const skyLine = skyLabel ? `${skyLabel} 날씨예요.` : "";
 
-  return [rainLine, [tempLine, umbrellaLine].filter(Boolean).join(" · "), skyLine]
+  const brief = [rainLine, [tempLine, umbrellaLine].filter(Boolean).join(" · "), skyLine]
     .filter(Boolean)
     .join("\n");
+
+  return { brief, hasPrecipitation: Boolean(rainRow) };
 }

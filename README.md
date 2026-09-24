@@ -9,7 +9,7 @@
 |---|---|---|
 | 아침 (config.json에서 시각 지정) | 자동(서버 스케줄) → 폰 알림 | 화~토: 전날 미국 증시 마감 요약 / 일: 주간 요약 / 월: 이번 주 실적·경제지표 프리뷰 (Twelve Data/Alpha Vantage/ForexFactory, LLM 없이 템플릿 포맷팅) |
 | 저녁 (config.json에서 시각 지정) | 자동(서버 스케줄) → 폰 알림 | config.json에 지정한 언론사 RSS를 모아 정치/사회/경제/스포츠/연예로 요약 |
-| 외출 준비 (매번 직접 입력) | 아이폰 단축어 실행 → 즉시 응답 | 입력한 장소까지 대중교통 최단 경로 + 출발시각부터 자정까지 날씨(비/눈 여부 중심). LLM 없이 템플릿 포맷팅, 경로/날씨 중 하나만 조회돼도 부분 응답 |
+| 외출 준비 (매번 직접 입력) | 아이폰 단축어 실행 → 즉시 응답 | 입력한 장소까지 대중교통 최단 경로 + 출발시각부터 자정까지 날씨(비/눈 여부 중심), 비/눈 예보 시 기상청 레이더 이미지 URL도 같이 응답. LLM 없이 템플릿 포맷팅, 경로/날씨 중 하나만 조회돼도 부분 응답 |
 
 ## 1. 사전 준비물 (API 키) — 전부 무료
 
@@ -21,9 +21,10 @@
 | 2 | `TWELVE_DATA_API_KEY` | 증시 지수(나스닥/S&P500/다우) | 하루 800회 · 분당 8회 | 불필요 |
 | 3 | `ALPHA_VANTAGE_API_KEY` | 월요일 실적 발표 프리뷰 | 하루 25~500회(계정별 상이) | 불필요 |
 | 4 | `KMA_SERVICE_KEY` | 기상청 단기예보 | 하루 약 1만 건 | 불필요 |
-| 5 | `KAKAO_REST_API_KEY` | 장소→좌표 변환 | 하루 10만 건 | 불필요 |
-| 6 | `ODSAY_API_KEY` | 대중교통 경로 | **하루 30건** (개인/학생 Basic) | 불필요 |
-| 7 | `NTFY_TOPIC` | 폰 알림 발송 | 무제한(공용 서버 예의상 사용) | 가입 자체 불필요 |
+| 5 | `KMA_RADAR_SERVICE_KEY` | 비/눈 예보 시 레이더 이미지 | 하루 약 1만 건 | 불필요 |
+| 6 | `KAKAO_REST_API_KEY` | 장소→좌표 변환 | 하루 10만 건 | 불필요 |
+| 7 | `ODSAY_API_KEY` | 대중교통 경로 | **하루 30건** (개인/학생 Basic) | 불필요 |
+| 8 | `NTFY_TOPIC` | 폰 알림 발송 | 무제한(공용 서버 예의상 사용) | 가입 자체 불필요 |
 
 1. **ANTHROPIC_API_KEY** — https://console.anthropic.com 에서 발급. 카드 등록이 필요하지만,
    이 서비스 사용량(하루 20건 안팎)이면 소액 크레딧으로 몇 달을 쓸 수 있습니다.
@@ -31,14 +32,16 @@
 3. **ALPHA_VANTAGE_API_KEY** — https://www.alphavantage.co/support/#api-key 에서 이메일만
    입력하면 즉시 발급. 월요일 프리뷰(주 1회)에만 쓰므로 무료 한도로 충분합니다.
 4. **KMA_SERVICE_KEY** — [공공데이터포털 단기예보 조회서비스](https://www.data.go.kr/data/15084084/openapi.do) "활용신청" 후 발급
-5. **KAKAO_REST_API_KEY** — https://developers.kakao.com → 애플리케이션 추가 → REST API 키
-6. **ODSAY_API_KEY** — https://lab.odsay.com 가입 후 발급. **하루 30건**까지만 무료라 아래
+5. **KMA_RADAR_SERVICE_KEY** — [공공데이터포털 레이더영상 조회서비스](https://www.data.go.kr/data/15056924/openapi.do)
+   "활용신청" 후 발급. `KMA_SERVICE_KEY`와 **별개 키**입니다(같은 포털이지만 API마다 따로 신청).
+6. **KAKAO_REST_API_KEY** — https://developers.kakao.com → 애플리케이션 추가 → REST API 키
+7. **ODSAY_API_KEY** — https://lab.odsay.com 가입 후 발급. **하루 30건**까지만 무료라 아래
    "무료 한도 주의사항"을 꼭 읽어보세요.
-7. **HOME_LAT / HOME_LON** — 기본 출발지(집) 좌표. 카카오맵/구글맵에서 우클릭 → 좌표 복사
-8. **NTFY_TOPIC** — 아무 문자열이나 추측하기 어려운 이름으로 정하기 (예: `jgi-briefing-xk92a`).
+8. **HOME_LAT / HOME_LON** — 기본 출발지(집) 좌표. 카카오맵/구글맵에서 우클릭 → 좌표 복사
+9. **NTFY_TOPIC** — 아무 문자열이나 추측하기 어려운 이름으로 정하기 (예: `jgi-briefing-xk92a`).
    가입 불필요. 아이폰에 App Store에서 **ntfy** 앱만 설치하고, 앱에서 같은 이름으로 구독하면 끝.
-9. **WEBHOOK_TOKEN** — 아무 긴 임의 문자열. 외부에 서버를 노출할 때 아무나 `/depart`를 호출하지
-   못하도록 막는 비밀값입니다. 단축어에서도 같은 값을 같이 보내야 합니다.
+10. **WEBHOOK_TOKEN** — 아무 긴 임의 문자열. 외부에 서버를 노출할 때 아무나 `/depart`를 호출하지
+    못하도록 막는 비밀값입니다. 단축어에서도 같은 값을 같이 보내야 합니다.
 
 ### 무료 한도 주의사항
 
@@ -214,6 +217,7 @@ personal-briefing/
 │  │  ├─ stock.js        # Twelve Data/Alpha Vantage/ForexFactory + 증시 브리핑 포맷팅 (LLM 미사용)
 │  │  ├─ weather.js      # 기상청 단기예보 + 날씨 텍스트 포맷팅 (LLM 미사용)
 │  │  ├─ route.js        # 카카오 지오코딩 + ODsay 대중교통 경로 (LLM 미사용)
+│  │  ├─ radarImage.js   # 비/눈 예보 시 기상청 레이더 이미지 URL 조회 (부가 기능)
 │  │  ├─ news.js         # RSS + 스크레이핑 수집 + 카테고리별 요약
 │  │  └─ notify.js       # ntfy.sh 푸시
 │  └─ utils/
@@ -240,13 +244,8 @@ personal-briefing/
 - [ ] `config.json`의 아침/저녁 시각, 언론사 목록을 원하는 대로 수정
 - [ ] ODsay 캐싱 추가 (현재 무캐싱, 하루 30건 한도라 반복 호출 시 주의)
 - [ ] `config.json` 핫리로드 (현재 서버 재시작 필요)
-- [ ] **(신규 기능, 설계만 완료)** 외출 준비 시 비/눈 예보면 기상청 레이더 이미지를 같이 보여주기.
-      공공데이터포털 "기상청_레이더영상 조회서비스"(`RadarImgInfoService`)를 쓰기로 했는데, 이 API가
-      "파일명 목록 조회 → 실제 이미지"의 2단계 구조로 보여서 **활용신청 후 실제 키로 호출해봐야
-      정확한 메커니즘을 확정할 수 있음**. 키 받으면: ① 2단계 호출 검증 ② `src/services/radarImage.js`
-      신설(이미지 바이너리 fetch) ③ 새 엔드포인트 `GET /depart/radar-image`로 서버가 프록시(API
-      키가 단축어로 노출되지 않게) ④ `/depart` 응답에 비/눈 예보 시에만 이미지 URL 포함 — 자세한
-      설계는 `docs/pipeline-architecture.dc.html`의 "설계됨 · 미구현" 표시 참고.
+- [ ] 레이더 이미지 URL이 `http`라서 iOS ATS(앱 전송 보안)에 막히는지 실제 단축어로 확인
+      (막히면 서버가 이미지를 대신 받아서 https로 넘겨주는 프록시 엔드포인트 추가 필요)
 - [ ] 서버를 상시 구동 환경에 올리기 (pm2 등)
 - [ ] Cloudflare Tunnel 등으로 외부 접근 주소 만들기
 - [ ] 아이폰 단축어 2개(외출 입력용, 필요시 ntfy 대체용) 만들기

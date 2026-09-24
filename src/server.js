@@ -2,6 +2,7 @@ import express from "express";
 import config from "../config.json" with { type: "json" };
 import { getRouteBrief } from "./services/route.js";
 import { getDepartureWeatherBrief } from "./services/weather.js";
+import { getLatestRadarImageUrl } from "./services/radarImage.js";
 import { runMorningJob, runEveningJob } from "./scheduler.js";
 import { readRecentRuns, logRun } from "./utils/runLog.js";
 
@@ -79,10 +80,16 @@ export function createServer() {
       }
 
       const routeText = routeOk ? routeSettled.value.brief : `⚠️ 조회 실패: ${routeSettled.reason.message}`;
-      const weatherText = weatherOk ? weatherSettled.value : `⚠️ 조회 실패: ${weatherSettled.reason.message}`;
+      const weatherText = weatherOk ? weatherSettled.value.brief : `⚠️ 조회 실패: ${weatherSettled.reason.message}`;
 
       const message = `🧭 ${place}\n\n[경로]\n${routeText}\n\n[날씨]\n${weatherText}`;
       const partial = !routeOk || !weatherOk;
+
+      // 비/눈이 예보된 경우에만 레이더 이미지 조회 — 부가 기능이라 실패해도 본 응답에 영향 없게.
+      const radarImageUrl =
+        weatherOk && weatherSettled.value.hasPrecipitation
+          ? await getLatestRadarImageUrl().catch(() => undefined)
+          : undefined;
 
       logRun({
         pipeline: "depart",
@@ -98,6 +105,7 @@ export function createServer() {
         message,
         partial,
         destination: routeOk ? routeSettled.value.destination : undefined,
+        radarImageUrl,
       });
     } catch (err) {
       console.error("[/depart] 오류:", err);
