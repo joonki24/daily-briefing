@@ -100,7 +100,9 @@ curl -X POST localhost:3000/test/evening
 
 1. **인스턴스 만들기** — Compute → Instances → Create instance
    - 이미지: **Ubuntu 22.04** / Shape: **VM.Standard.A1.Flex**(Always Free ARM), 2 OCPU · 12GB 정도
-     (Chromium을 돌려야 해서 1GB짜리 AMD Micro는 메모리가 빠듯합니다)
+     (Chromium을 돌려야 해서 1GB짜리 AMD Micro는 메모리가 빠듯합니다. 이미 있는 Micro를 쓰는
+     경우 `deploy/setup-ubuntu.sh`가 스왑 2GB를 자동으로 만들어주지만, 뉴스 스크레이핑 중
+     프로세스가 OOM으로 죽으면 A1로 옮기세요)
    - 리전은 가능하면 **서울/춘천** — 기상청·언론사 사이트가 해외 IP를 막는 경우가 있음
    - SSH 키를 내려받아 보관
 2. **공인 IP를 ODsay에 등록** — 인스턴스의 Public IP를 lab.odsay.com → Application → 설정 →

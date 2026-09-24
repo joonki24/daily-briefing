@@ -8,6 +8,16 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+# RAM이 2GB 미만이고 스왑이 없으면(예: Oracle E2.1.Micro 1GB) 스왑 2GB를 만든다.
+# Chromium 설치/실행 중 메모리 부족(OOM)으로 프로세스가 죽는 걸 막기 위함.
+if [ "$(free -m | awk '/^Mem:/{print $2}')" -lt 2000 ] && [ -z "$(swapon --show --noheadings)" ]; then
+  sudo fallocate -l 2G /swapfile
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile
+  sudo swapon /swapfile
+  echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null
+fi
+
 sudo apt-get update
 sudo apt-get install -y curl git
 
