@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import config from "../config.json" with { type: "json" };
-import { getMorningStockBrief } from "./services/stockSave.js";
+import { getMorningStockBrief } from "./services/stock.js";
 import { getEveningNewsBrief } from "./services/news.js";
 import { pushNotification } from "./services/notify.js";
 import { logRun } from "./utils/runLog.js";

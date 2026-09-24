@@ -22,14 +22,31 @@
     { "name": "채널A", "type": "scrape", "url": "https://news.ichannela.com" },
     { "name": "JTBC", "type": "scrape", "url": "https://news.jtbc.co.kr" }
   ],
-  "_newsOutlets_설명": "type이 'rss'면 RSS 주소(rss)를 그대로 파싱하고, 'scrape'면 url을 브라우저로 직접 렌더링해서 화면에 보이는 텍스트를 긁어온 뒤 Gemini가 그중 실제 뉴스만 골라 요약합니다. SBS/한국경제는 실제 작동하는 RSS를 확인해서 넣었고, MBC/KBS/연합뉴스/채널A/JTBC는 공개 RSS가 없어 스크레이핑 방식입니다 — 사이트 구조가 바뀌면 실패할 수 있으니 README의 '7번 항목'을 참고해 점검하세요.",
+  "_newsOutlets_설명": "type이 'rss'면 RSS 주소(rss)를 그대로 파싱하고, 'scrape'면 url을 브라우저로 직접 렌더링해서 화면에 보이는 텍스트를 긁어온 뒤 Claude가 그중 실제 뉴스만 골라 요약합니다. SBS/한국경제는 실제 작동하는 RSS를 확인해서 넣었고, MBC/KBS/연합뉴스/채널A/JTBC는 공개 RSS가 없어 스크레이핑 방식입니다 — 사이트 구조가 바뀌면 실패할 수 있으니 README의 '7번 항목'을 참고해 점검하세요.",
 
   "newsCategories": ["정치", "사회", "경제", "스포츠", "연예"],
 
-  "stockSource": {
-    "name": "SAVE (saveticker.com)",
-    "url": "https://www.saveticker.com/news",
-    "_주의": "SAVE는 공식 공개 API/RSS가 없어 웹페이지를 직접 읽어옵니다(브라우저 자동화). 사이트 구조가 바뀌면 src/services/stockSave.js의 선택자(selector)를 갱신해야 합니다."
+  "stock": {
+    "indices": [
+      { "symbol": "IXIC", "label": "나스닥" },
+      { "symbol": "GSPC", "label": "S&P500" },
+      { "symbol": "DJI", "label": "다우" }
+    ],
+    "_indices_설명": "Twelve Data 지수 심볼. 실제 호출해보고 틀리면 이 값만 고치면 된다 (src/services/stock.js는 이 설정을 그대로 읽음).",
+    "sp100": [
+      "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "META", "TSLA", "BRK.B", "JPM",
+      "V", "UNH", "XOM", "JNJ", "WMT", "MA", "PG", "HD", "CVX", "MRK",
+      "ABBV", "LLY", "PEP", "KO", "COST", "AVGO", "MCD", "BAC", "PFE", "TMO",
+      "CSCO", "ACN", "ABT", "DIS", "ADBE", "CRM", "NFLX", "WFC", "DHR", "VZ",
+      "NKE", "TXN", "PM", "NEE", "BMY", "UPS", "RTX", "LOW", "UNP", "COP",
+      "MS", "HON", "ORCL", "QCOM", "LIN", "AMGN", "SBUX", "IBM", "CAT", "GS",
+      "BA", "INTC", "AMD", "DE", "SPGI", "BLK", "PLD", "GE", "MDT", "ELV",
+      "ISRG", "NOW", "INTU", "AMT", "AXP", "T", "CVS", "GILD", "MO", "SYK",
+      "ADP", "LMT", "TJX", "MDLZ", "C", "SCHW", "ZTS", "BKNG", "MMC", "CB",
+      "SO", "DUK", "BDX", "USB", "PGR", "TGT", "EQIX", "APD", "ADI", "CME",
+      "PYPL", "KLAC", "NSC"
+    ],
+    "_sp100_설명": "실적 발표 프리뷰(월요일)를 S&P100 종목으로만 좁히는 필터. 지수 구성은 자주 안 바뀌므로 가끔 수동으로 갱신하면 된다."
   },
 
   "home": {

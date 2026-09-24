@@ -7,7 +7,7 @@
 
 | 시점 | 방식 | 내용 |
 |---|---|---|
-| 아침 (config.json에서 시각 지정) | 자동(서버 스케줄) → 폰 알림 | SAVE(saveticker.com) 페이지를 읽어서 미국 증시 요약 |
+| 아침 (config.json에서 시각 지정) | 자동(서버 스케줄) → 폰 알림 | 화~토: 전날 미국 증시 마감 요약 / 일: 주간 요약 / 월: 이번 주 실적·경제지표 프리뷰 (Twelve Data/Alpha Vantage/ForexFactory, LLM 없이 템플릿 포맷팅) |
 | 저녁 (config.json에서 시각 지정) | 자동(서버 스케줄) → 폰 알림 | config.json에 지정한 언론사 RSS를 모아 정치/사회/경제/스포츠/연예로 요약 |
 | 외출 준비 (매번 직접 입력) | 아이폰 단축어 실행 → 즉시 응답 | 입력한 장소까지 대중교통 최단 경로 + 출발시각부터 자정까지 날씨(비/눈 여부 중심) |
 
@@ -17,22 +17,27 @@
 
 | # | 키 | 용도 | 무료 한도 | 카드 등록 |
 |---|---|---|---|---|
-| 1 | `ANTHROPIC_API_KEY` | 요약 생성(LLM, Claude Haiku 4.5) | 무료 아님 — 이 서비스 규모(하루 20건 안팎)엔 월 1달러 안팎 | 필요 |
-| 2 | `KMA_SERVICE_KEY` | 기상청 단기예보 | 하루 약 1만 건 | 불필요 |
-| 3 | `KAKAO_REST_API_KEY` | 장소→좌표 변환 | 하루 10만 건 | 불필요 |
-| 4 | `ODSAY_API_KEY` | 대중교통 경로 | **하루 30건** (개인/학생 Basic) | 불필요 |
-| 5 | `NTFY_TOPIC` | 폰 알림 발송 | 무제한(공용 서버 예의상 사용) | 가입 자체 불필요 |
+| 1 | `ANTHROPIC_API_KEY` | 요약 생성(LLM, Claude Haiku 4.5 — 뉴스 브리핑에만 씀) | 무료 아님 — 이 서비스 규모(하루 20건 안팎)엔 월 1달러 안팎 | 필요 |
+| 2 | `TWELVE_DATA_API_KEY` | 증시 지수(나스닥/S&P500/다우) | 하루 800회 · 분당 8회 | 불필요 |
+| 3 | `ALPHA_VANTAGE_API_KEY` | 월요일 실적 발표 프리뷰 | 하루 25~500회(계정별 상이) | 불필요 |
+| 4 | `KMA_SERVICE_KEY` | 기상청 단기예보 | 하루 약 1만 건 | 불필요 |
+| 5 | `KAKAO_REST_API_KEY` | 장소→좌표 변환 | 하루 10만 건 | 불필요 |
+| 6 | `ODSAY_API_KEY` | 대중교통 경로 | **하루 30건** (개인/학생 Basic) | 불필요 |
+| 7 | `NTFY_TOPIC` | 폰 알림 발송 | 무제한(공용 서버 예의상 사용) | 가입 자체 불필요 |
 
 1. **ANTHROPIC_API_KEY** — https://console.anthropic.com 에서 발급. 카드 등록이 필요하지만,
    이 서비스 사용량(하루 20건 안팎)이면 소액 크레딧으로 몇 달을 쓸 수 있습니다.
-2. **KMA_SERVICE_KEY** — [공공데이터포털 단기예보 조회서비스](https://www.data.go.kr/data/15084084/openapi.do) "활용신청" 후 발급
-3. **KAKAO_REST_API_KEY** — https://developers.kakao.com → 애플리케이션 추가 → REST API 키
-4. **ODSAY_API_KEY** — https://lab.odsay.com 가입 후 발급. **하루 30건**까지만 무료라 아래
+2. **TWELVE_DATA_API_KEY** — https://twelvedata.com 가입 후 발급. 신용카드 불필요.
+3. **ALPHA_VANTAGE_API_KEY** — https://www.alphavantage.co/support/#api-key 에서 이메일만
+   입력하면 즉시 발급. 월요일 프리뷰(주 1회)에만 쓰므로 무료 한도로 충분합니다.
+4. **KMA_SERVICE_KEY** — [공공데이터포털 단기예보 조회서비스](https://www.data.go.kr/data/15084084/openapi.do) "활용신청" 후 발급
+5. **KAKAO_REST_API_KEY** — https://developers.kakao.com → 애플리케이션 추가 → REST API 키
+6. **ODSAY_API_KEY** — https://lab.odsay.com 가입 후 발급. **하루 30건**까지만 무료라 아래
    "무료 한도 주의사항"을 꼭 읽어보세요.
-5. **HOME_LAT / HOME_LON** — 기본 출발지(집) 좌표. 카카오맵/구글맵에서 우클릭 → 좌표 복사
-6. **NTFY_TOPIC** — 아무 문자열이나 추측하기 어려운 이름으로 정하기 (예: `jgi-briefing-xk92a`).
+7. **HOME_LAT / HOME_LON** — 기본 출발지(집) 좌표. 카카오맵/구글맵에서 우클릭 → 좌표 복사
+8. **NTFY_TOPIC** — 아무 문자열이나 추측하기 어려운 이름으로 정하기 (예: `jgi-briefing-xk92a`).
    가입 불필요. 아이폰에 App Store에서 **ntfy** 앱만 설치하고, 앱에서 같은 이름으로 구독하면 끝.
-7. **WEBHOOK_TOKEN** — 아무 긴 임의 문자열. 외부에 서버를 노출할 때 아무나 `/depart`를 호출하지
+9. **WEBHOOK_TOKEN** — 아무 긴 임의 문자열. 외부에 서버를 노출할 때 아무나 `/depart`를 호출하지
    못하도록 막는 비밀값입니다. 단축어에서도 같은 값을 같이 보내야 합니다.
 
 ### 무료 한도 주의사항
@@ -42,7 +47,11 @@
   테스트할 때는 특히 주의하세요. 초과하면 그날은 유료 전환하지 않는 한 호출이 막힙니다.
 - **Claude Haiku 4.5 비용은 이 서비스 규모(하루 20건 안팎)엔 부담이 거의 없습니다** (대략 월 1달러 안팎).
   카드 등록 없이 쓰고 싶다면 `src/services/llmClient.js`만 다른 LLM API 형식에 맞게 바꾸면
-  나머지 코드는 그대로 씁니다.
+  나머지 코드는 그대로 씁니다. 증시/외출준비 브리핑은 LLM을 아예 쓰지 않아 이 비용과 무관합니다.
+- **Twelve Data / Alpha Vantage는 이 서비스 사용량(하루 1~4회)엔 전혀 부담 없는 한도**입니다.
+- **`config.json`의 `stock.indices` 심볼(`IXIC`/`GSPC`/`DJI`)이 실제로 안 맞으면** 증시 브리핑이
+  에러를 냅니다. 처음 실행 시 `curl -X POST localhost:3000/test/morning`으로 꼭 확인하고,
+  안 맞으면 `stock.indices`의 `symbol` 값만 고치면 됩니다.
 
 ## 2. 설치 및 실행
 
@@ -62,8 +71,7 @@ node src/index.js
 
 > 처음 실행할 때 `browserType.launch: Executable doesn't exist ...` 같은 오류가 나면
 > Playwright가 쓸 브라우저가 아직 안 받아진 상태입니다. `npx playwright install chromium`
-> 한 번 실행한 뒤 다시 시작하세요. (SAVE 증시 스크레이핑, MBC/KBS/연합뉴스/채널A/JTBC 뉴스
-> 스크레이핑 둘 다 이 브라우저를 사용합니다)
+> 한 번 실행한 뒤 다시 시작하세요. (MBC/KBS/연합뉴스/채널A/JTBC 뉴스 스크레이핑이 이 브라우저를 사용합니다)
 
 아침/저녁 시각은 코드가 아니라 **`config.json`의 `morning.time` / `evening.time`**만 고치면 바로 반영됩니다
 (서버 재시작 필요).
@@ -150,12 +158,14 @@ pm2 startup   # 재부팅 시 자동 시작 설정 (안내되는 명령 그대�
 
 **왜 두 가지 방식(`type`)이 섞여 있나:** SBS와 한국경제는 실제로 살아있는 공식 RSS를 찾아서
 검증했지만(직접 요청해서 기사 제목이 나오는 것까지 확인), MBC·KBS·연합뉴스·채널A·JTBC는 공개
-RSS를 제공하지 않아서(요즘 방송사들이 흔히 그렇습니다) SAVE와 같은 방식으로 홈페이지를 직접
-렌더링해서 텍스트를 긁어온 뒤 Claude가 그중 진짜 뉴스 제목만 골라내게 했습니다.
+RSS를 제공하지 않아서(요즘 방송사들이 흔히 그렇습니다) 홈페이지를 직접 렌더링해서 텍스트를
+긁어온 뒤 Claude가 그중 진짜 뉴스 제목만 골라내게 했습니다. (**연합뉴스는 실제로는 RSS가
+있음을 확인했지만, `config.json` 반영은 다음 재설계 단계로 미뤄둔 상태입니다** —
+`docs/pipeline-architecture.dc.html` 참고)
 
 - `type: "rss"` → 빠르고 안정적. `rss` 필드에 실제 RSS XML 주소를 넣습니다.
 - `type: "scrape"` → `url` 필드에 언론사 뉴스 홈페이지 주소를 넣으면 브라우저로 열어서 읽어옵니다.
-  **사이트 구조가 바뀌면 실패할 수 있습니다.** (SAVE와 동일한 제약, 7번 항목 참고)
+  **사이트 구조가 바뀌면 실패할 수 있습니다.**
 - 새 언론사를 추가하고 싶으면: 진짜 RSS가 있으면 `type: "rss"`로, 없으면 `type: "scrape"`로
   뉴스 홈페이지 주소를 넣으면 됩니다.
 - 카테고리(정치/사회/경제/스포츠/연예) 분류는 각 기사 제목/원문을 Claude가 읽고 판단하는
@@ -163,8 +173,8 @@ RSS를 제공하지 않아서(요즘 방송사들이 흔히 그렇습니다) SAV
   바꿀 수 있습니다.
 
 **⚠️ MBC/KBS/연합뉴스/채널A/JTBC 스크레이핑은 아직 실제로 못 돌려봤습니다.** 개발 환경(샌드박스)의
-네트워크가 이 5개 사이트로 나가는 걸 막고 있어서, 코드는 SAVE와 동일한 검증된 패턴으로 짰지만
-실제로 각 사이트에서 뉴스 텍스트가 잘 뽑히는지는 본인 컴퓨터에서 직접 확인해야 합니다.
+네트워크가 이 5개 사이트로 나가는 걸 막고 있어서, 실제로 각 사이트에서 뉴스 텍스트가 잘 뽑히는지는
+본인 컴퓨터에서 직접 확인해야 합니다.
 
 ```bash
 curl -X POST localhost:3000/test/evening
@@ -175,19 +185,18 @@ curl -X POST localhost:3000/test/evening
 (로그인 요구, 심한 봇 차단 등) 확인한 뒤 `url`을 다른 페이지(예: 모바일 버전, 특정 섹션 페이지)로
 바꿔보세요.
 
-## 7. SAVE(saveticker.com) 관련 중요 제약
+## 7. 증시 브리핑 관련 참고 사항
 
-- SAVE는 **공식 공개 API/RSS가 없습니다.** 이 프로젝트는 Playwright로 헤드리스 브라우저를 띄워
-  `saveticker.com/news` 페이지를 직접 읽어옵니다 (`src/services/stockSave.js`).
-- 로그인 없이 볼 수 있는 공개 페이지만 읽습니다. 로그인 후에만 보이는 콘텐츠(앱 전용 정보 등)는
-  가져오지 못합니다.
-- **사이트가 리뉴얼되면 깨질 수 있습니다.** 브리핑이 "⚠️ 내용을 가져오지 못했습니다"로 오면
-  `npx playwright screenshot https://www.saveticker.com/news out.png`로 실제 화면을 먼저
-  확인한 뒤 `stockSave.js`를 손보세요.
-- 개인적으로, 하루 1~2회 정도의 낮은 빈도로만 접근하도록 설계되어 있습니다. 이용약관을 벗어나는
-  과도한 크롤링이나 재배포는 하지 마세요.
-- 나중에 안정성이 더 중요해지면, 시황 "수치"는 Finnhub/Yahoo Finance 같은 공식 API로 받고
-  SAVE는 "코멘트/이슈" 텍스트 보조용으로만 쓰는 하이브리드 구성으로 바꿀 수 있습니다.
+- 지수 수치는 SAVE 스크레이핑 대신 **Twelve Data**(공식 API)로 받습니다. 요일별로 소스와 형식이
+  다릅니다: 화~토는 지수 시세(`/quote`), 일요일은 주간 시계열(`/time_series`), 월요일은 실적
+  발표(Alpha Vantage `EARNINGS_CALENDAR`, S&P100으로 필터) + 경제지표(ForexFactory 캘린더,
+  중요도 High만 필터) — 자세한 흐름은 `docs/pipeline-architecture.dc.html` 참고.
+- 이 브리핑은 **LLM을 쓰지 않습니다.** 숫자는 이미 API가 확정해서 주므로 `src/services/stock.js`가
+  템플릿 문자열로 그대로 포맷팅합니다 — 지어낼 수치 자체가 없는 구조입니다.
+- `config.json`의 `stock.indices` 심볼이 Twelve Data와 안 맞으면 증시 브리핑이 에러를 냅니다.
+  처음 설치 시 `curl -X POST localhost:3000/test/morning`으로 꼭 확인하세요.
+- `stock.sp100` 목록은 실적 발표 프리뷰(월요일)를 대형주로 좁히는 용도입니다. S&P100 구성은
+  자주 안 바뀌므로 가끔 수동으로 갱신하면 됩니다.
 
 ## 8. 폴더 구조
 
@@ -200,8 +209,8 @@ personal-briefing/
 │  ├─ server.js         # /depart 등 HTTP 엔드포인트
 │  ├─ scheduler.js       # 아침/저녁 자동 실행
 │  ├─ services/
-│  │  ├─ llmClient.js    # Claude Haiku 4.5 요약 래퍼
-│  │  ├─ stockSave.js    # SAVE 스크레이핑 + 증시 요약
+│  │  ├─ llmClient.js    # Claude Haiku 4.5 요약 래퍼 (뉴스 브리핑에서만 사용)
+│  │  ├─ stock.js        # Twelve Data/Alpha Vantage/ForexFactory + 증시 브리핑 포맷팅 (LLM 미사용)
 │  │  ├─ weather.js      # 기상청 단기예보 + 날씨 요약
 │  │  ├─ route.js        # 카카오 지오코딩 + ODsay 대중교통 경로
 │  │  ├─ news.js         # RSS + 스크레이핑 수집 + 카테고리별 요약
@@ -210,15 +219,19 @@ personal-briefing/
 │     ├─ retry.js        # 범용 재시도 헬퍼
 │     ├─ validate.js     # 검증 규칙 빌딩블록
 │     ├─ runLog.js       # 실행 이력 기록/조회 (logs/runs.jsonl)
+│     ├─ kst.js          # 한국 시각 기준 날짜/요일 계산 공용 유틸
 │     ├─ grid.js         # 위경도 ↔ 기상청 격자좌표 변환
-│     └─ browserText.js  # Playwright 공용 헬퍼 (SAVE·언론사 스크레이핑에서 공유)
+│     └─ browserText.js  # Playwright 공용 헬퍼 (언론사 스크레이핑에서 사용)
 ```
 
 ## 9. 남은 할 일 / 다음에 손볼 만한 것
 
 - [ ] `.env` 값 채우기 (위 1번 표)
+- [ ] `curl -X POST .../test/morning`로 `config.json`의 `stock.indices` 심볼이 Twelve Data와
+      맞는지 실제 키로 확인 (안 맞으면 심볼만 수정)
 - [ ] `config.json`의 아침/저녁 시각, 언론사 목록을 원하는 대로 수정
+- [ ] 뉴스 파이프라인 재작성 (연합뉴스 RSS 전환, LLM 검증 규칙 등 — 증시는 이미 반영됨)
+- [ ] 외출 준비 파이프라인 재작성 (LLM 제거·템플릿 포맷팅, 부분 응답 허용)
 - [ ] 서버를 상시 구동 환경에 올리기 (pm2 등)
 - [ ] Cloudflare Tunnel 등으로 외부 접근 주소 만들기
 - [ ] 아이폰 단축어 2개(외출 입력용, 필요시 ntfy 대체용) 만들기
-- [ ] `curl -X POST .../test/morning` 로 실제 API 키로 한 번 테스트

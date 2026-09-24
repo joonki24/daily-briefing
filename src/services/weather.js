@@ -1,5 +1,6 @@
 import { latLonToGrid } from "../utils/grid.js";
 import { summarize } from "./llmClient.js";
+import { nowInKST } from "../utils/kst.js";
 
 const BASE_URL =
   "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
@@ -106,23 +107,6 @@ function groupByTime(items) {
     map.get(key)[it.category] = it.fcstValue;
   }
   return [...map.values()].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-}
-
-// 서버가 어느 시간대(TZ)에서 돌든 항상 "한국 시각" 기준으로 날짜/시각을 얻는다.
-function nowInKST() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-  const get = (t) => parts.find((p) => p.type === t)?.value;
-  return {
-    dateStr: `${get("year")}${get("month")}${get("day")}`,
-    hour: get("hour") === "24" ? "00" : get("hour"),
-  };
 }
 
 /**

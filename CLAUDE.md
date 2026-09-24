@@ -7,15 +7,15 @@
 개인용 자동화 브리핑 서버. 챗봇 형태가 아니라, 정해진 시각에 스케줄러가 자동으로 정보를 요약해
 푸시 알림(ntfy)으로 보내고, 필요할 때만 iOS 단축어로 HTTP 엔드포인트를 호출하는 구조.
 
-- 아침: 미국 증시 요약 → 자동 발송
+- 아침: 미국 증시 요약(화~토) / 주간 요약(일) / 실적·경제지표 프리뷰(월) → 자동 발송
 - 저녁: 국내 뉴스 요약(카테고리별) → 자동 발송
 - 외출 준비: 장소를 받아 대중교통 경로 + 날씨 요약 → 요청 즉시 응답
 
 > **파이프라인 재설계 진행 중.** 아키텍처는 확정됐고(`docs/pipeline-architecture.dc.html` 참고),
-> 공통 기반(LLM 클라이언트 교체, 재시도/검증/로깅 유틸)까지 구현됨. 증시/뉴스/외출준비
-> 파이프라인 자체의 재작성(구조화 데이터는 LLM 없이 템플릿 포맷팅으로 전환 등)은 아직 진행 전 —
-> `stockSave.js`/`weather.js`/`route.js`/`news.js`는 기존 로직 그대로에 새 LLM 클라이언트만 물린
-> 상태다. 이 섹션은 그 재작성이 끝나면 다시 갱신할 것.
+> 공통 기반(LLM 클라이언트 교체, 재시도/검증/로깅 유틸)과 **증시 파이프라인**(`src/services/stock.js`
+> — Twelve Data/Alpha Vantage/ForexFactory, LLM 없이 템플릿 포맷팅)까지 구현됨. **뉴스/외출준비는
+> 아직 재작성 전** — `weather.js`/`route.js`/`news.js`는 기존 로직 그대로에 새 LLM 클라이언트만
+> 물린 상태다. 이 섹션은 그 재작성이 끝나면 다시 갱신할 것.
 
 ## 빌드 / 실행 / 테스트 명령
 
@@ -57,7 +57,7 @@ curl -X POST localhost:3000/test/evening   # 저녁 브리핑 즉시 실행
 - ES Modules (`"type": "module"`), `import`/`export`만 사용. `require` 금지.
 - 비동기 처리는 `async`/`await`만 사용. `.then()` 체이닝 금지.
 - 들여쓰기 2칸, 세미콜론 사용, 문자열은 큰따옴표(`"`).
-- 함수/변수명은 camelCase, 파일명은 camelCase (`stockSave.js`, `browserText.js`).
+- 함수/변수명은 camelCase, 파일명은 camelCase (`stock.js`, `browserText.js`).
 - **사용자 대면 텍스트(알림 제목/본문, 에러 메시지, README, 프롬프트 지시문)는 한국어.**
   코드 식별자(함수명/변수명)는 영어.
 - 주석은 "왜"를 설명할 때만 작성한다 (예: 무료 API 한도, 사이트 구조가 바뀌면 깨지는 이유).
@@ -77,6 +77,7 @@ src/
    ├─ retry.js      범용 재시도 헬퍼 (withRetry) — 수집/LLM 호출 어디서든 재사용
    ├─ validate.js   검증 규칙 빌딩블록 (isNonEmpty/hasAllHeaders/hasKeyword)
    ├─ runLog.js     실행 이력 JSONL 기록/조회 (logRun/readRecentRuns)
+   ├─ kst.js          한국 시각 기준 날짜/시각/요일 (nowInKST) — weather.js/stock.js가 공유
    ├─ browserText.js  Playwright 공용 헬퍼
    └─ grid.js         좌표 변환
 ```
@@ -100,7 +101,7 @@ src/
 
 - `config.json`의 시각/언론사 목록만 바꾼 경우도 서버 재시작이 필요하다 (정적 import이므로
   핫리로드 없음) — 이 제약이 아직 유효한지 재설계 시 다시 확인할 것.
-- 스크레이핑 대상(SAVE, 언론사 스크레이핑 5곳)의 selector/구조를 바꿀 때는 커밋 전에
+- 스크레이핑 대상(언론사 스크레이핑 4곳)의 selector/구조를 바꿀 때는 커밋 전에
   `npx playwright screenshot <url> out.png`로 실제 렌더링을 먼저 확인한다.
 - 커밋 전 `curl -X POST localhost:3000/test/morning`과 `/test/evening`을 실행해 실제
   브리핑 텍스트가 정상적으로 생성되는지 확인한다 (자동 테스트가 없으므로 이것이 유일한 검증).
