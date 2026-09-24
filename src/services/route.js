@@ -1,5 +1,3 @@
-import { summarize } from "./llmClient.js";
-
 /**
  * 장소명(예: "강남역", "판교테크노밸리 정문")을 좌표로 변환 (카카오 로컬 API).
  * @returns {{lat:number, lon:number, roadAddress:string, placeName:string}}
@@ -76,22 +74,24 @@ export async function fetchTransitRoute(fromLat, fromLon, toLat, toLon) {
 }
 
 /**
- * 최단 대중교통 경로를 사람이 읽기 좋은 한 문단으로 요약.
+ * 최단 대중교통 경로를 사람이 읽기 좋은 텍스트로 포맷팅.
+ * 이미 확정된 숫자·경로 데이터라 LLM을 쓰지 않고 템플릿으로 조립한다.
  */
 export async function getRouteBrief(fromLat, fromLon, toPlace) {
   const dest = await geocodePlace(toPlace);
   const route = await fetchTransitRoute(fromLat, fromLon, dest.lat, dest.lon);
 
-  const raw = `목적지: ${dest.placeName} (${dest.roadAddress})
-총 소요시간: 약 ${route.totalTimeMin}분 (도보 ${route.totalWalkMin}분 포함)
-환승 횟수: ${route.transferCount}회
-예상 요금: ${route.payment}원
-세부 경로:
-${route.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+  if (!Number.isFinite(Number(route.totalTimeMin))) {
+    throw new Error("경로 데이터가 비정상입니다 (총 소요시간 값 없음).");
+  }
 
-  const instruction = `아래는 대중교통 최단 경로 원본 데이터야. 외출 직전에 폰으로 훑어보고 바로 이해할 수 있게
-3~4줄로 요약해줘. 총 소요시간과 환승 정보, 핵심 이동수단(몇 호선/몇 번 버스)을 반드시 포함해.`;
-
-  const brief = await summarize(instruction, raw);
+  const brief = formatRouteBrief(dest, route);
   return { destination: dest, route, brief };
+}
+
+function formatRouteBrief(dest, route) {
+  const header = `🚌 ${dest.placeName}까지 총 ${route.totalTimeMin}분 (도보 ${route.totalWalkMin}분 포함) · 환승 ${route.transferCount}회`;
+  const stepsLine = route.steps.join(" → ");
+  const paymentLine = `예상 요금 ${route.payment}원`;
+  return [header, stepsLine, paymentLine].join("\n");
 }

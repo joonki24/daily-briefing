@@ -3,7 +3,7 @@ import config from "../config.json" with { type: "json" };
 import { getRouteBrief } from "./services/route.js";
 import { getDepartureWeatherBrief } from "./services/weather.js";
 import { runMorningJob, runEveningJob } from "./scheduler.js";
-import { readRecentRuns } from "./utils/runLog.js";
+import { readRecentRuns, logRun } from "./utils/runLog.js";
 
 export function createServer() {
   const app = express();
@@ -40,6 +40,7 @@ export function createServer() {
    * 예: GET /depart?place=강남역&time=18:30&token=WEBHOOK_TOKEN
    */
   app.all("/depart", async (req, res) => {
+    const startedAt = Date.now();
     try {
       const place = req.query.place ?? req.body?.place;
       const timeRaw = req.query.time ?? req.body?.time;
@@ -53,22 +54,60 @@ export function createServer() {
       const homeLat = Number(process.env.HOME_LAT);
       const homeLon = Number(process.env.HOME_LON);
 
-      const [routeResult, weatherBrief] = await Promise.all([
+      // 경로/날씨를 독립적으로 처리 — 하나가 실패해도 나머지로 부분 응답한다
+      // (요청 트리거라 사용자가 화면 앞에서 기다리는 중이므로, 완전 실패보다 부분 정보가 낫다).
+      const [routeSettled, weatherSettled] = await Promise.allSettled([
         getRouteBrief(homeLat, homeLon, place),
-        getDepartureWeatherBrief(homeLat, homeLon, place, departureHHmm).catch(
-          (e) => `날씨 조회 실패: ${e.message}`
-        ),
+        getDepartureWeatherBrief(homeLat, homeLon, place, departureHHmm),
       ]);
 
-      const message =
-        `🧭 ${place}\n\n` +
-        `[경로]\n${routeResult.brief}\n\n` +
-        `[날씨]\n${weatherBrief}`;
+      const routeOk = routeSettled.status === "fulfilled";
+      const weatherOk = weatherSettled.status === "fulfilled";
+
+      if (!routeOk && !weatherOk) {
+        logRun({
+          pipeline: "depart",
+          trigger: "request",
+          status: "failed",
+          durationMs: Date.now() - startedAt,
+          error: `경로: ${routeSettled.reason?.message}; 날씨: ${weatherSettled.reason?.message}`,
+        });
+        return res.status(500).json({
+          ok: false,
+          error: "경로와 날씨 모두 조회하지 못했습니다.",
+        });
+      }
+
+      const routeText = routeOk ? routeSettled.value.brief : `⚠️ 조회 실패: ${routeSettled.reason.message}`;
+      const weatherText = weatherOk ? weatherSettled.value : `⚠️ 조회 실패: ${weatherSettled.reason.message}`;
+
+      const message = `🧭 ${place}\n\n[경로]\n${routeText}\n\n[날씨]\n${weatherText}`;
+      const partial = !routeOk || !weatherOk;
+
+      logRun({
+        pipeline: "depart",
+        trigger: "request",
+        status: partial ? "degraded" : "success",
+        durationMs: Date.now() - startedAt,
+        note: partial ? (routeOk ? "날씨 실패" : "경로 실패") : undefined,
+      });
 
       // 단축어는 이 응답의 텍스트를 그대로 "알림 표시"에 넣어 쓰면 됨.
-      res.json({ ok: true, message, destination: routeResult.destination });
+      res.json({
+        ok: true,
+        message,
+        partial,
+        destination: routeOk ? routeSettled.value.destination : undefined,
+      });
     } catch (err) {
       console.error("[/depart] 오류:", err);
+      logRun({
+        pipeline: "depart",
+        trigger: "request",
+        status: "failed",
+        durationMs: Date.now() - startedAt,
+        error: String(err.message ?? err),
+      });
       res.status(500).json({ ok: false, error: err.message ?? String(err) });
     }
   });

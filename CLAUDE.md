@@ -11,11 +11,12 @@
 - 저녁: 국내 뉴스 요약(카테고리별) → 자동 발송
 - 외출 준비: 장소를 받아 대중교통 경로 + 날씨 요약 → 요청 즉시 응답
 
-> **파이프라인 재설계 진행 중.** 아키텍처는 확정됐고(`docs/pipeline-architecture.dc.html` 참고),
-> 공통 기반(LLM 클라이언트 교체, 재시도/검증/로깅 유틸)과 **증시 파이프라인**(`src/services/stock.js`
-> — Twelve Data/Alpha Vantage/ForexFactory, LLM 없이 템플릿 포맷팅)까지 구현됨. **뉴스/외출준비는
-> 아직 재작성 전** — `weather.js`/`route.js`/`news.js`는 기존 로직 그대로에 새 LLM 클라이언트만
-> 물린 상태다. 이 섹션은 그 재작성이 끝나면 다시 갱신할 것.
+> **파이프라인 재설계 1차 완료.** 아키텍처는 확정됐고(`docs/pipeline-architecture.dc.html` 참고),
+> 3개 파이프라인(증시/뉴스/외출준비) 전부 재작성됨 — 증시(`stock.js`)와 외출준비(`route.js`/
+> `weather.js`)는 LLM 없이 템플릿 포맷팅, 뉴스(`news.js`)만 Claude Haiku 4.5로 카테고리
+> 분류/요약 + 검증/재시도. 남은 건 실사용하며 확인할 항목들뿐: Twelve Data 지수 심볼이 실제
+> API 키로 맞는지, MBC/KBS/채널A/JTBC 스크레이핑이 실제로 되는지, ODsay 캐싱(3번)·설정
+> 핫리로드(7번) 같은 "나중에" 항목 — 자세한 건 README "9. 남은 할 일" 참고.
 
 ## 빌드 / 실행 / 테스트 명령
 

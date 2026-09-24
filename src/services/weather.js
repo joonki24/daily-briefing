@@ -1,5 +1,4 @@
 import { latLonToGrid } from "../utils/grid.js";
-import { summarize } from "./llmClient.js";
 import { nowInKST } from "../utils/kst.js";
 
 const BASE_URL =
@@ -93,6 +92,12 @@ const PTY_LABEL = {
   7: "눈날림",
 };
 
+const SKY_LABEL = {
+  1: "맑은",
+  3: "구름 많은",
+  4: "흐린",
+};
+
 /**
  * items(카테고리별로 흩어진 행들)를 "YYYYMMDDHHmm" 시각 기준으로 묶어
  * { time, TMP, POP, PTY, SKY, REH } 형태의 시간대별 예보 배열로 변환.
@@ -122,9 +127,10 @@ function filterFromTimeUntilMidnight(rows, fromHHmm) {
 
 /**
  * 외출 브리핑용: 출발 시각부터 자정까지 강수/강설 여부 중심 날씨 요약.
+ * 이미 확정된 예보 수치라 LLM을 쓰지 않고 템플릿으로 조립한다.
  * @param {number} lat
  * @param {number} lon
- * @param {string} placeLabel - "강남역" 같은 사람이 읽을 장소 이름 (요약 프롬프트용)
+ * @param {string} placeLabel - "강남역" 같은 사람이 읽을 장소 이름
  * @param {string} departureHHmm - "1830" 처럼 4자리 시각(HHmm). 생략 시 현재 시각 사용.
  */
 export async function getDepartureWeatherBrief(lat, lon, placeLabel, departureHHmm) {
@@ -133,21 +139,28 @@ export async function getDepartureWeatherBrief(lat, lon, placeLabel, departureHH
   const from = departureHHmm ?? `${nowInKST().hour}00`;
   const relevant = filterFromTimeUntilMidnight(rows, from);
 
-  const table = relevant
-    .map((r) => {
-      const pty = PTY_LABEL[Number(r.PTY)] ?? r.PTY;
-      return `${r.time.slice(0, 2)}시: 기온 ${r.TMP ?? "-"}°C, 강수확률 ${r.POP ?? "-"}%, 강수형태 ${pty}, 하늘상태코드 ${r.SKY ?? "-"}`;
-    })
+  return formatWeatherBrief(placeLabel, relevant);
+}
+
+function formatWeatherBrief(placeLabel, relevant) {
+  if (relevant.length === 0) {
+    return `${placeLabel} 지역의 남은 시간대 예보 데이터가 없습니다 (이미 자정에 가까운 시각일 수 있음).`;
+  }
+
+  const rainRow = relevant.find((r) => Number(r.PTY) !== 0);
+  const rainLine = rainRow
+    ? `☔ ${rainRow.time.slice(0, 2)}시경부터 ${PTY_LABEL[Number(rainRow.PTY)]} 예보가 있어요.`
+    : `☀️ 자정까지 비/눈 소식은 없어요.`;
+
+  const temps = relevant.map((r) => Number(r.TMP)).filter(Number.isFinite);
+  const tempLine = temps.length > 0 ? `기온 ${Math.min(...temps)}~${Math.max(...temps)}°C` : "";
+  const umbrellaLine = rainRow ? "우산 챙기세요" : "우산은 필요 없어요";
+
+  // 비/눈이 예보돼 있으면 하늘상태 코드가 "맑음"이어도 오해를 주므로 생략(비 안내가 우선).
+  const skyLabel = rainRow ? undefined : SKY_LABEL[Number(relevant[0]?.SKY)];
+  const skyLine = skyLabel ? `${skyLabel} 날씨예요.` : "";
+
+  return [rainLine, [tempLine, umbrellaLine].filter(Boolean).join(" · "), skyLine]
+    .filter(Boolean)
     .join("\n");
-
-  const instruction = `아래는 "${placeLabel}" 지역의, 외출 시각(${from.slice(0, 2)}시${from.slice(2)}분경)부터
-자정까지 시간대별 기상청 단기예보 데이터야. 이걸 바탕으로 외출 준비하는 사람에게 줄 날씨 브리핑을 작성해줘.
-
-반드시 지킬 것:
-1. 가장 먼저 "외출 시각부터 자정 사이에 비/눈이 오는지 여부"를 한 문장으로 명확히 알려줘 (온다면 대략 몇 시쯤인지).
-2. 그다음 기온 범위(최저~최고), 우산 필요 여부를 알려줘.
-3. 마지막에 전반적인 날씨(맑음/흐림 등)와 옷차림 관련 짧은 팁 한 줄.
-4. 전체 5줄 이내로, 수치는 원본 데이터에 있는 값만 사용해.`;
-
-  return summarize(instruction, table);
 }
