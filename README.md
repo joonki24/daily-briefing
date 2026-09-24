@@ -148,20 +148,18 @@ pm2 startup   # 재부팅 시 자동 시작 설정 (안내되는 명령 그대�
 "newsOutlets": [
   { "name": "SBS",     "type": "rss",     "rss": "https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER" },
   { "name": "한국경제", "type": "rss",     "rss": "https://www.hankyung.com/feed/all-news" },
+  { "name": "연합뉴스", "type": "rss",     "rss": "https://www.yna.co.kr/rss/news.xml" },
   { "name": "MBC",      "type": "scrape",  "url": "https://imnews.imbc.com" },
   { "name": "KBS",      "type": "scrape",  "url": "https://news.kbs.co.kr" },
-  { "name": "연합뉴스", "type": "scrape",  "url": "https://www.yna.co.kr" },
   { "name": "채널A",    "type": "scrape",  "url": "https://news.ichannela.com" },
   { "name": "JTBC",     "type": "scrape",  "url": "https://news.jtbc.co.kr" }
 ]
 ```
 
-**왜 두 가지 방식(`type`)이 섞여 있나:** SBS와 한국경제는 실제로 살아있는 공식 RSS를 찾아서
-검증했지만(직접 요청해서 기사 제목이 나오는 것까지 확인), MBC·KBS·연합뉴스·채널A·JTBC는 공개
-RSS를 제공하지 않아서(요즘 방송사들이 흔히 그렇습니다) 홈페이지를 직접 렌더링해서 텍스트를
-긁어온 뒤 Claude가 그중 진짜 뉴스 제목만 골라내게 했습니다. (**연합뉴스는 실제로는 RSS가
-있음을 확인했지만, `config.json` 반영은 다음 재설계 단계로 미뤄둔 상태입니다** —
-`docs/pipeline-architecture.dc.html` 참고)
+**왜 두 가지 방식(`type`)이 섞여 있나:** SBS·한국경제·연합뉴스는 실제로 살아있는 공식 RSS를
+찾아서 검증했지만(직접 요청해서 기사 제목이 나오는 것까지 확인), MBC·KBS·채널A·JTBC는 공개
+RSS를 못 찾아서(요즘 방송사들이 흔히 그렇습니다) 홈페이지를 직접 렌더링해서 텍스트를 긁어온 뒤
+Claude가 그중 진짜 뉴스 제목만 골라내게 했습니다.
 
 - `type: "rss"` → 빠르고 안정적. `rss` 필드에 실제 RSS XML 주소를 넣습니다.
 - `type: "scrape"` → `url` 필드에 언론사 뉴스 홈페이지 주소를 넣으면 브라우저로 열어서 읽어옵니다.
@@ -171,9 +169,12 @@ RSS를 제공하지 않아서(요즘 방송사들이 흔히 그렇습니다) 홈
 - 카테고리(정치/사회/경제/스포츠/연예) 분류는 각 기사 제목/원문을 Claude가 읽고 판단하는
   방식이라 100% 정확하지는 않습니다. `config.json`의 `newsCategories`로 카테고리 이름/구성을
   바꿀 수 있습니다.
+- **응답 검증**: LLM 응답에 카테고리 헤더 5개가 다 있는지 확인하고, 빠졌으면 강조 문구를 붙여
+  1회 재시도합니다. 그래도 형식이 안 맞으면 "⚠️ 형식 확인 필요" 딱지를 붙여서라도 그대로
+  발송합니다 (완전히 실패 처리하지 않음 — `src/services/news.js` 참고).
 
-**⚠️ MBC/KBS/연합뉴스/채널A/JTBC 스크레이핑은 아직 실제로 못 돌려봤습니다.** 개발 환경(샌드박스)의
-네트워크가 이 5개 사이트로 나가는 걸 막고 있어서, 실제로 각 사이트에서 뉴스 텍스트가 잘 뽑히는지는
+**⚠️ MBC/KBS/채널A/JTBC 스크레이핑은 아직 실제로 못 돌려봤습니다.** 개발 환경(샌드박스)의
+네트워크가 이 4개 사이트로 나가는 걸 막고 있어서, 실제로 각 사이트에서 뉴스 텍스트가 잘 뽑히는지는
 본인 컴퓨터에서 직접 확인해야 합니다.
 
 ```bash

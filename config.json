@@ -16,13 +16,13 @@
   "newsOutlets": [
     { "name": "SBS", "type": "rss", "rss": "https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER" },
     { "name": "한국경제", "type": "rss", "rss": "https://www.hankyung.com/feed/all-news" },
+    { "name": "연합뉴스", "type": "rss", "rss": "https://www.yna.co.kr/rss/news.xml" },
     { "name": "MBC", "type": "scrape", "url": "https://imnews.imbc.com" },
     { "name": "KBS", "type": "scrape", "url": "https://news.kbs.co.kr" },
-    { "name": "연합뉴스", "type": "scrape", "url": "https://www.yna.co.kr" },
     { "name": "채널A", "type": "scrape", "url": "https://news.ichannela.com" },
     { "name": "JTBC", "type": "scrape", "url": "https://news.jtbc.co.kr" }
   ],
-  "_newsOutlets_설명": "type이 'rss'면 RSS 주소(rss)를 그대로 파싱하고, 'scrape'면 url을 브라우저로 직접 렌더링해서 화면에 보이는 텍스트를 긁어온 뒤 Claude가 그중 실제 뉴스만 골라 요약합니다. SBS/한국경제는 실제 작동하는 RSS를 확인해서 넣었고, MBC/KBS/연합뉴스/채널A/JTBC는 공개 RSS가 없어 스크레이핑 방식입니다 — 사이트 구조가 바뀌면 실패할 수 있으니 README의 '7번 항목'을 참고해 점검하세요.",
+  "_newsOutlets_설명": "type이 'rss'면 RSS 주소(rss)를 그대로 파싱하고, 'scrape'면 url을 브라우저로 직접 렌더링해서 화면에 보이는 텍스트를 긁어온 뒤 Claude가 그중 실제 뉴스만 골라 요약합니다. RSS 3곳(SBS/한국경제/연합뉴스)은 실제 작동하는 RSS를 확인해서 넣었고, MBC/KBS/채널A/JTBC는 공개 RSS를 못 찾아 스크레이핑 방식입니다 — 사이트 구조가 바뀌면 실패할 수 있으니 README의 '6번 항목'을 참고해 점검하세요.",
 
   "newsCategories": ["정치", "사회", "경제", "스포츠", "연예"],
 

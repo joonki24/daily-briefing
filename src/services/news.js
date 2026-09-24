@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 import { summarize } from "./llmClient.js";
 import { withBrowser, fetchPageText } from "../utils/browserText.js";
+import { hasAllHeaders, isNonEmpty } from "../utils/validate.js";
 import config from "../../config.json" with { type: "json" };
 
 const parser = new Parser({ timeout: 10000 });
@@ -109,10 +110,28 @@ export async function getEveningNewsBrief() {
 - "(홈페이지를 그대로 긁어온 원문)"이라고 표시된 언론사는 메뉴/배너/추천기사 위젯 등 뉴스가 아닌 텍스트가 섞여 있을 수 있으니, 실제 기사 제목으로 보이는 것만 뽑아서 사용해.
 - 각 항목은 한 줄(가능하면 30자 내외)로 압축.`;
 
-  const brief = await summarize(instruction, raw);
+  const brief = await summarizeWithValidation(instruction, raw);
 
   if (failed.length > 0) {
     return `${brief}\n\n(참고: ${failed.map((f) => f.outlet).join(", ")} 수집 실패)`;
   }
   return brief;
+}
+
+/**
+ * 카테고리 헤더 5개가 응답에 다 있는지 검증하고, 빠졌으면 강조 문구를 붙여 1회 재시도.
+ * 재시도까지 실패하면 완전히 실패 처리하지 않고 "⚠️ 형식 확인 필요" 딱지를 붙여서 그대로 발송한다.
+ */
+async function summarizeWithValidation(instruction, raw) {
+  const headers = config.newsCategories.map((c) => `[${c}]`);
+  const isValid = (text) => isNonEmpty(text) && hasAllHeaders(text, headers);
+
+  let brief = await summarize(instruction, raw);
+  if (isValid(brief)) return brief;
+
+  const reinforcedInstruction = `${instruction}\n\n반드시 위 형식대로 카테고리 헤더 ${headers.join("")}를 빠짐없이 모두 포함해.`;
+  brief = await summarize(reinforcedInstruction, raw);
+  if (isValid(brief)) return brief;
+
+  return `⚠️ 형식 확인 필요\n\n${brief}`;
 }
