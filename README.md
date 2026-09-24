@@ -128,18 +128,31 @@ curl -X POST localhost:3000/test/evening
 
 코드를 갱신할 때는 서버에서 `git pull && npm ci && pm2 restart daily-briefing`.
 
-## 4. 외부(아이폰)에서 `/depart`를 호출할 수 있게 열기
+## 4. 외부(아이폰)에서 서버를 호출할 수 있게 열기 (HTTPS 주소)
 
-집 서버는 기본적으로 외부(예: 밖에서 LTE로)에서 접근이 안 됩니다. 아이폰 단축어가 어디서든
-호출할 수 있게 하려면 아래 중 하나가 필요합니다.
+서버가 Oracle 클라우드에 있어 공인 IP는 이미 있지만, 단축어가 보내는 `WEBHOOK_TOKEN`이 암호화 없이
+인터넷을 지나가지 않도록 **HTTPS 주소**가 필요합니다. 도메인을 사지 않고 이렇게 했습니다.
 
-- **Cloudflare Tunnel (추천, 무료)** — 공유기 포트포워딩 없이 `https://your-name.trycloudflare.com` 같은
-  고정 HTTPS 주소를 받을 수 있습니다.
-- **Tailscale Funnel** — 개인 VPN망(Tailscale)에 이미 익숙하다면 간단합니다.
-- VPS에 직접 올린 경우 → 그 서버의 공인 IP/도메인 + Nginx로 HTTPS 붙이기
+- **sslip.io**: `150-230-211-135.sslip.io`처럼 "IP를 하이픈으로 쓴 이름"이 자동으로 그 IP를 가리키는
+  무료 서비스 (가입/결제 없음)
+- **Caddy**: 그 이름으로 Let's Encrypt 인증서를 자동 발급·갱신하고 `localhost:3000`(Node 서버)으로 전달.
+  설정은 `deploy/Caddyfile` 한 덩어리 (서버의 `/etc/caddy/Caddyfile`)
 
-이 중 무엇을 쓰든, 외부에 열리는 주소는 반드시 `WEBHOOK_TOKEN`을 함께 확인하도록 되어 있으니
-토큰 없이 `/depart`가 호출되지 않게 하세요.
+**한 번만 하는 설정 (이미 완료)**
+1. Oracle 콘솔: VCN → Security → Default Security List → **Ingress 규칙에 TCP 80, 443 추가**
+   (Source `0.0.0.0/0`) — 이걸 안 열면 인증서 발급도 접속도 안 됩니다.
+2. 서버 방화벽(iptables): Oracle 우분투 이미지는 기본으로 22번만 열려 있어서 80/443을 REJECT 규칙
+   앞에 추가하고 `sudo netfilter-persistent save`로 저장.
+   `sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 80 -j ACCEPT` (443도 동일, 6번 위치)
+3. Caddy 설치(공식 apt 저장소) 후 `deploy/Caddyfile`을 `/etc/caddy/Caddyfile`에 넣고 `sudo systemctl restart caddy`
+
+**현재 주소**: `https://150-230-211-135.sslip.io`
+- 3000번 포트는 밖에서 직접 못 들어오고 반드시 Caddy(HTTPS)를 거칩니다. http로 접속하면 https로 자동 이동합니다.
+- 토큰은 `?token=` 쿼리 대신 **`Authorization: Bearer <토큰>` 헤더**로 보내는 걸 권장합니다(주소창/기록에 안 남음).
+  둘 다 동작합니다.
+- **주소가 바뀌는 경우**: 이 이름은 서버 공인 IP에 묶여 있어서, 인스턴스를 지우고 새로 만들면 IP와 함께
+  주소가 바뀌고 가족 단축어도 전부 고쳐야 합니다. 그게 걱정되면 Oracle에서 공인 IP를 **Reserved IP**로 고정하세요.
+- 서버 IP가 바뀌면 함께 바꿔야 할 것: `deploy/Caddyfile`의 이름, ODsay Server IP.
 
 ## 5. 아이폰 "단축어" 설정
 
