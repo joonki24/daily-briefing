@@ -94,14 +94,37 @@ curl -X POST localhost:3000/test/evening
 - 저가 VPS (월 몇천 원대, 예: Oracle Cloud 무료 티어, Vultr, 라이트세일 등)
 - 라즈베리파이
 
-상시 구동 시에는 `pm2` 같은 프로세스 매니저를 쓰면 편합니다.
+상시 구동에는 `pm2`를 씁니다 (`ecosystem.config.cjs`에 설정이 들어 있음).
 
-```bash
-npm install -g pm2
-pm2 start src/index.js --name personal-briefing
-pm2 save
-pm2 startup   # 재부팅 시 자동 시작 설정 (안내되는 명령 그대로 실행)
-```
+### Oracle Cloud 무료 티어에 올리기 (이 프로젝트의 배포 계획)
+
+1. **인스턴스 만들기** — Compute → Instances → Create instance
+   - 이미지: **Ubuntu 22.04** / Shape: **VM.Standard.A1.Flex**(Always Free ARM), 2 OCPU · 12GB 정도
+     (Chromium을 돌려야 해서 1GB짜리 AMD Micro는 메모리가 빠듯합니다)
+   - 리전은 가능하면 **서울/춘천** — 기상청·언론사 사이트가 해외 IP를 막는 경우가 있음
+   - SSH 키를 내려받아 보관
+2. **공인 IP를 ODsay에 등록** — 인스턴스의 Public IP를 lab.odsay.com → Application → 설정 →
+   Server IP에 넣기 (안 하면 `ApiKeyAuthFailed`)
+3. **서버에 코드 올리기**
+   ```bash
+   ssh -i <키파일> ubuntu@<공인IP>
+   git clone https://github.com/joonki24/daily_briefing.git && cd daily_briefing
+   ```
+4. **`.env`는 git이 아니라 로컬 PC에서 scp로** (비밀키라 저장소에 없음)
+   ```bash
+   scp -i <키파일> .env ubuntu@<공인IP>:~/daily_briefing/.env
+   ```
+5. **세팅 스크립트 실행** — Node 20, pm2, Playwright(Chromium)까지 설치하고 pm2로 기동
+   ```bash
+   bash deploy/setup-ubuntu.sh
+   ```
+   마지막에 `pm2 startup`이 출력하는 `sudo ...` 명령을 그대로 복사해서 실행해야 재부팅 후에도 자동 시작됩니다.
+6. **확인** — `pm2 status`, `curl "localhost:3000/health?token=<WEBHOOK_TOKEN>"`
+
+외부 접근은 Cloudflare Tunnel(다음 섹션)이 서버에서 바깥으로 연결을 여는 방식이라
+**인바운드 포트(3000)를 열 필요가 없습니다.**
+
+코드를 갱신할 때는 서버에서 `git pull && npm ci && pm2 restart daily-briefing`.
 
 ## 4. 외부(아이폰)에서 `/depart`를 호출할 수 있게 열기
 
