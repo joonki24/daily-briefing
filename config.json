@@ -33,6 +33,13 @@
       { "symbol": "DIA", "label": "다우" }
     ],
     "_indices_설명": "Twelve Data 무료 티어는 원시 지수(IXIC/GSPC/DJI)를 막아놔서(실제 호출 시 'Grow 이상 플랜부터 가능' 오류) 추적 ETF로 대체함. QQQ는 나스닥종합이 아니라 나스닥100 추적이라 완전히 같은 지수는 아니지만 일반적으로 통용되는 수준. SPY/DIA는 오차가 매우 작음.",
+    "issueFeeds": [
+      { "name": "연합뉴스 증시", "url": "https://www.yna.co.kr/rss/market.xml" },
+      { "name": "연합뉴스 국제", "url": "https://www.yna.co.kr/rss/international.xml" },
+      { "name": "한국경제 증권", "url": "https://www.hankyung.com/feed/finance" }
+    ],
+    "issueKeywords": ["뉴욕증시", "미국 증시", "뉴욕 증시", "월가", "나스닥", "다우"],
+    "_issue_설명": "화~토 아침 브리핑 밑에 붙이는 '시장 이슈' 요약의 재료. 이 피드들에서 제목에 issueKeywords가 들어간 최근 기사(제목+첫 문단)만 골라 Claude가 3~4줄로 요약한다. 피드 주소가 바뀌거나 기사가 없으면 이 부분만 빠지고 지수 숫자는 그대로 나간다.",
     "sp100": [
       "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "META", "TSLA", "BRK.B", "JPM",
       "V", "UNH", "XOM", "JNJ", "WMT", "MA", "PG", "HD", "CVX", "MRK",

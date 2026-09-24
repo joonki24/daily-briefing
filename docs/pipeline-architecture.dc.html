@@ -97,7 +97,7 @@ body{margin:0;background:oklch(96% 0.008 70);}
           <div style="font-size:12.5px;font-weight:700;">발송</div>
         </div>
       </div>
-      <div style="font-size:10.5px;color:oklch(48% 0.01 60);margin-top:6px;">적용: 저녁 뉴스(카테고리 분류/요약), 증시 "이슈 코멘트"(소스 확정 시에만 추가)</div>
+      <div style="font-size:10.5px;color:oklch(48% 0.01 60);margin-top:6px;">적용: 저녁 뉴스(카테고리 분류/요약), 증시 "시장 이슈"(화~토, 기사 본문 요약)</div>
     </div>
   </div>
 
@@ -159,22 +159,29 @@ body{margin:0;background:oklch(96% 0.008 70);}
   </div>
 
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-left:12px;">
-    <div style="font-size:10.5px;color:oklch(45% 0.01 60);background:oklch(93% 0.02 250);border-radius:12px;padding:4px 9px;white-space:nowrap;">선택 · 소스 확정 시</div>
+    <div style="font-size:10.5px;color:oklch(45% 0.01 60);background:oklch(93% 0.008 60);border-radius:12px;padding:4px 9px;white-space:nowrap;">화~토 · 시장 이슈 (패턴 B)</div>
     <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="position:relative;width:130px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:7px 9px;text-align:center;">
-      <div style="font-size:12px;font-weight:600;">이슈 코멘트</div>
-      <div style="font-size:9.5px;color:oklch(45% 0.08 250);margin-top:2px;">"미정"</div>
+    <div style="width:200px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">뉴스 RSS 후보 수집</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">연합 증시·국제 / 한경 증권 (최근 30시간)</div>
     </div>
     <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="width:130px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:7px 9px;text-align:center;">
-      <div style="font-size:12px;font-weight:600;">프롬프트 조립<br>→ LLM 요약 (패턴 B)</div>
+    <div style="width:190px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">기사 본문 1~2개 읽기</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">일반 HTTP + cheerio, 본문은 저장 안 함</div>
     </div>
     <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
-    <div style="width:150px;background:oklch(93% 0.02 250);border:1.5px dashed oklch(60% 0.08 250);border-radius:8px;padding:7px 9px;text-align:center;">
-      <div style="font-size:12px;font-weight:600;">포맷팅 결과와 결합 후 발송</div>
+    <div style="width:150px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">LLM 요약 (3~4줄)</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">Claude Haiku 4.5 · 출처 표기</div>
+    </div>
+    <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
+    <div style="width:170px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">검증 후 지수 밑에 결합</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">실패하면 이 줄만 생략</div>
     </div>
   </div>
-  <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:20px;">미확정 · "이슈 코멘트" 보조 소스 (확정 전까지는 지수만 포맷팅해서 발송, 이 구간 자체가 없음)</div>
+  <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:20px;">"예정:" 줄은 기사에 앞으로의 일정 표현이 있을 때만 통과 · 지수 등락 반복 금지 · 기사에 없는 수치 금지 · 개인/가족용 전제(원문 저작권 문구 때문에 공개 서비스로 확장 불가)</div>
 
   <!-- ROW 1-B: 일요일 주간 요약 -->
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-left:12px;">
