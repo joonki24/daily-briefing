@@ -66,7 +66,9 @@ export async function fetchTransitRoute(fromLat, fromLon, toLat, toLon) {
 
   return {
     totalTimeMin: best.info?.totalTime,
-    totalWalkMin: best.info?.totalWalk,
+    // ODsay의 info.totalWalk는 "분"이 아니라 "도보 거리(m)"다 — 실제 호출로 확인함
+    // (totalWalkTime 필드는 이 엔드포인트에서 -1로 비어있어 쓸 수 없음).
+    totalWalkMeters: best.info?.totalWalk,
     transferCount: best.info?.busTransitCount + best.info?.subwayTransitCount,
     payment: best.info?.payment,
     steps,
@@ -90,7 +92,7 @@ export async function getRouteBrief(fromLat, fromLon, toPlace) {
 }
 
 function formatRouteBrief(dest, route) {
-  const header = `🚌 ${dest.placeName}까지 총 ${route.totalTimeMin}분 (도보 ${route.totalWalkMin}분 포함) · 환승 ${route.transferCount}회`;
+  const header = `🚌 ${dest.placeName}까지 총 ${route.totalTimeMin}분 (도보 ${route.totalWalkMeters}m 포함) · 환승 ${route.transferCount}회`;
   const stepsLine = route.steps.join(" → ");
   const paymentLine = `예상 요금 ${route.payment}원`;
   return [header, stepsLine, paymentLine].join("\n");

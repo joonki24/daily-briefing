@@ -18,7 +18,15 @@ export async function getLatestRadarImageUrl() {
 
   try {
     const { dateStr } = nowInKST();
-    const url = `${LIST_URL}?serviceKey=${apiKey}&pageNo=1&numOfRows=300&data=CMP_WRC&time=${dateStr}&dataType=JSON`;
+    const url = new URL(LIST_URL);
+    // data.go.kr이 주는 키가 인코딩된 형태든 아니든 안전하게 동작하도록 디코딩 후 넣는다
+    // (URLSearchParams가 알아서 한 번만 인코딩함 — weather.js와 동일한 패턴).
+    url.searchParams.set("serviceKey", decodeURIComponent(apiKey));
+    url.searchParams.set("pageNo", "1");
+    url.searchParams.set("numOfRows", "300");
+    url.searchParams.set("data", "CMP_WRC");
+    url.searchParams.set("time", dateStr);
+    url.searchParams.set("dataType", "JSON");
 
     const filenames = await withRetry(
       async () => {

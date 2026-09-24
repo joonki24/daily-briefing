@@ -59,7 +59,9 @@ export async function fetchForecastItems(lat, lon) {
   const { base_date, base_time } = getLatestBaseDateTime();
 
   const url = new URL(BASE_URL);
-  url.searchParams.set("serviceKey", serviceKey);
+  // data.go.kr이 주는 "인코딩된" 키를 그대로 넣으면 URLSearchParams가 한 번 더 인코딩해서
+  // 깨진다(이중 인코딩) — 먼저 디코딩해서 원본 문자열로 되돌린 뒤 넣는다.
+  url.searchParams.set("serviceKey", decodeURIComponent(serviceKey));
   url.searchParams.set("numOfRows", "1000");
   url.searchParams.set("pageNo", "1");
   url.searchParams.set("dataType", "JSON");
