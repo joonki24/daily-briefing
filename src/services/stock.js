@@ -40,18 +40,47 @@ export async function getMorningStockBrief() {
 // ── 화~토: 전날 마감 요약 ──────────────────────────────────────
 
 async function getDailyBrief() {
-  const quotes = await Promise.all(
-    config.stock.indices.map((idx) => fetchQuote(idx.symbol).then((q) => ({ ...idx, ...q })))
-  );
+  const holdings = getHoldings();
+  const symbols = [...config.stock.indices.map((idx) => idx.symbol), ...holdings];
+  const entries = await fetchTwelveDataBatch("quote", symbols);
 
-  const invalid = quotes.filter((q) => !Number.isFinite(Number(q.close)) || !Number.isFinite(Number(q.percentChange)));
-  if (invalid.length > 0) {
-    throw new Error(`증시 지수 값이 비정상입니다: ${invalid.map((q) => q.symbol).join(", ")}`);
+  const quotes = config.stock.indices.map((idx) => {
+    const q = parseQuote(entries[idx.symbol]);
+    if (!q) throw new Error(`증시 지수 값이 비정상입니다: ${idx.symbol}`);
+    return { ...idx, ...q };
+  });
+
+  let brief = formatDailyBrief(quotes);
+  if (holdings.length > 0) {
+    const lines = holdings.map((symbol) => formatHoldingLine(symbol, parseQuote(entries[symbol]), ""));
+    brief += `\n\n📊 내 보유 종목\n${lines.join("\n")}`;
   }
-
-  const brief = formatDailyBrief(quotes);
+  const reminder = await getHoldingsEarningsReminder();
+  if (reminder) brief += `\n\n${reminder}`;
   const issues = await getMarketIssues();
   return issues ? `${brief}\n\n📌 시장 이슈\n${issues}` : brief;
+}
+
+// 보유 종목은 개인 포트폴리오라 공개 저장소의 config.json이 아니라 서버 .env에만 둔다.
+function getHoldings() {
+  return (process.env.HOLDINGS ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+function parseQuote(entry) {
+  if (!entry || entry.status === "error") return undefined;
+  const close = Number(entry.close);
+  const percentChange = Number(entry.percent_change);
+  if (!Number.isFinite(close) || !Number.isFinite(percentChange)) return undefined;
+  return { close: entry.close, percentChange: entry.percent_change, datetime: entry.datetime };
+}
+
+function formatHoldingLine(symbol, q, prefix) {
+  if (!q) return `- ${symbol}: 조회 실패`;
+  const pct = Number(q.percentChange);
+  return `- ${symbol}: ${formatNumber(q.close)} (${prefix}${pct >= 0 ? "▲" : "▼"}${Math.abs(pct).toFixed(2)}%)`;
 }
 
 // ── 시장 이슈 요약 (뉴스 기사 → Claude, 실패하면 undefined) ─────
@@ -167,27 +196,48 @@ async function fetchArticleBody(link) {
   }
 }
 
-async function fetchQuote(symbol) {
-  const apiKey = requireEnv("TWELVE_DATA_API_KEY");
-  const url = `${TWELVE_DATA_BASE}/quote?symbol=${symbol}&apikey=${apiKey}`;
+// 무료 티어는 분당 8크레딧이고 배치 호출도 심볼당 1크레딧이라, 8개씩 끊어 청크 사이에 1분 쉰다.
+// 429가 나면 한도가 풀릴 때까지 기다린 뒤 withRetry가 다시 시도한다.
+const TWELVE_DATA_CHUNK = 8;
+const RATE_LIMIT_WAIT_MS = 61000;
 
-  return withRetry(
-    async () => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Twelve Data 호출 실패: ${res.status}`);
-      const json = await res.json();
-      if (json.status === "error" || json.code) {
-        throw new Error(`Twelve Data 오류(${symbol}): ${json.message ?? JSON.stringify(json)}`);
-      }
-      return {
-        close: json.close,
-        percentChange: json.percent_change,
-        change: json.change,
-        datetime: json.datetime,
-      };
-    },
-    { backoffMs: [2000, 5000] }
-  );
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// endpoint: "quote" | "time_series". 반환: { 심볼: 응답 객체 } (심볼별 실패는 status "error"로 남는다)
+async function fetchTwelveDataBatch(endpoint, symbols, extraParams = "") {
+  const apiKey = requireEnv("TWELVE_DATA_API_KEY");
+  const result = {};
+
+  for (let i = 0; i < symbols.length; i += TWELVE_DATA_CHUNK) {
+    if (i > 0) await sleep(RATE_LIMIT_WAIT_MS);
+    const chunk = symbols.slice(i, i + TWELVE_DATA_CHUNK);
+    const url = `${TWELVE_DATA_BASE}/${endpoint}?symbol=${chunk.join(",")}${extraParams}&apikey=${apiKey}`;
+
+    const json = await withRetry(
+      async () => {
+        const res = await fetch(url);
+        if (res.status === 429) {
+          await sleep(RATE_LIMIT_WAIT_MS);
+          throw new Error("Twelve Data 호출 한도 초과(429)");
+        }
+        if (!res.ok) throw new Error(`Twelve Data 호출 실패: ${res.status}`);
+        const body = await res.json();
+        if (body.code === 429) {
+          await sleep(RATE_LIMIT_WAIT_MS);
+          throw new Error("Twelve Data 호출 한도 초과(429)");
+        }
+        if (chunk.length > 1 && body.status === "error" && !chunk.some((s) => body[s])) {
+          throw new Error(`Twelve Data 오류: ${body.message ?? JSON.stringify(body)}`);
+        }
+        return body;
+      },
+      { backoffMs: [2000, 5000] }
+    );
+
+    if (chunk.length === 1) result[chunk[0]] = json;
+    else for (const s of chunk) result[s] = json[s];
+  }
+  return result;
 }
 
 function formatDailyBrief(quotes) {
@@ -210,41 +260,49 @@ function formatDailyBrief(quotes) {
 // ── 일요일: 주간 요약 ──────────────────────────────────────────
 
 async function getWeeklyBrief() {
-  const series = await Promise.all(
-    config.stock.indices.map((idx) => fetchWeeklySeries(idx.symbol).then((s) => ({ ...idx, series: s })))
-  );
-  return formatWeeklyBrief(series);
-}
+  const holdings = getHoldings();
+  const symbols = [...config.stock.indices.map((idx) => idx.symbol), ...holdings];
+  const entries = await fetchTwelveDataBatch("time_series", symbols, "&interval=1day&outputsize=6");
 
-async function fetchWeeklySeries(symbol) {
-  const apiKey = requireEnv("TWELVE_DATA_API_KEY");
-  const url = `${TWELVE_DATA_BASE}/time_series?symbol=${symbol}&interval=1day&outputsize=6&apikey=${apiKey}`;
-
-  return withRetry(
-    async () => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Twelve Data 호출 실패: ${res.status}`);
-      const json = await res.json();
-      if (json.status === "error" || json.code) {
-        throw new Error(`Twelve Data 오류(${symbol}): ${json.message ?? JSON.stringify(json)}`);
-      }
-      // values: 최신순. 이번 주 첫 거래일(월) 종가 대비 마지막 거래일(금) 종가로 주간 등락 계산.
-      return (json.values ?? []).slice(0, 5).reverse();
-    },
-    { backoffMs: [2000, 5000] }
-  );
-}
-
-function formatWeeklyBrief(indexSeries) {
-  const lines = indexSeries.map(({ label, series }) => {
-    if (series.length < 2) return `- ${label}: 데이터 부족`;
-    const first = Number(series[0].close);
-    const last = Number(series[series.length - 1].close);
-    const pct = ((last - first) / first) * 100;
-    const sign = pct >= 0 ? "▲" : "▼";
-    return `- ${label}: ${formatNumber(last)} (주간 ${sign}${Math.abs(pct).toFixed(2)}%)`;
+  const indexLines = config.stock.indices.map((idx) => {
+    const w = parseWeekly(entries[idx.symbol]);
+    if (!w) return `- ${idx.label}: 데이터 부족`;
+    return `- ${idx.label}: ${formatNumber(w.last)} (주간 ${w.pct >= 0 ? "▲" : "▼"}${Math.abs(w.pct).toFixed(2)}%)`;
   });
-  return ["📈 이번 주 미국 증시 주간 요약", ...lines].join("\n");
+  let brief = ["📈 이번 주 미국 증시 주간 요약", ...indexLines].join("\n");
+
+  if (holdings.length > 0) {
+    const lines = holdings.map((symbol) => {
+      const w = parseWeekly(entries[symbol]);
+      return formatHoldingLine(symbol, w && { close: w.last, percentChange: w.pct }, "주간 ");
+    });
+    brief += `\n\n📊 내 보유 종목\n${lines.join("\n")}`;
+  }
+  const reminder = await getHoldingsEarningsReminder();
+  return reminder ? `${brief}\n\n${reminder}` : brief;
+}
+
+// values는 최신순. 주간 등락 = 지난주 금요일 종가 대비 이번 주 마지막 거래일 종가.
+// 월요일 종가를 기준으로 삼으면 월요일 하루치 등락이 빠지므로, 이번 주 월요일보다 앞선 첫 거래일을 기준으로 한다.
+function parseWeekly(entry) {
+  const values = entry?.status === "error" ? undefined : entry?.values;
+  if (!Array.isArray(values) || values.length < 2) return undefined;
+
+  const latest = values[0];
+  const dow = new Date(`${latest.datetime.slice(0, 10)}T00:00:00Z`).getUTCDay();
+  const mondayStr = shiftDate(latest.datetime.slice(0, 10), -((dow + 6) % 7));
+  const base = values.find((v) => v.datetime.slice(0, 10) < mondayStr);
+
+  const baseClose = Number(base?.close);
+  const last = Number(latest.close);
+  if (!Number.isFinite(baseClose) || !Number.isFinite(last) || baseClose === 0) return undefined;
+  return { last, pct: ((last - baseClose) / baseClose) * 100 };
+}
+
+function shiftDate(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 // ── 월요일: 실적/경제지표 프리뷰 ──────────────────────────────
@@ -254,10 +312,43 @@ async function getMondayPreviewBrief() {
     fetchSp100Earnings(),
     fetchHighImpactEvents(),
   ]);
-  return formatMondayPreview(earnings, econEvents);
+  const brief = formatMondayPreview(earnings, econEvents, new Set(getHoldings()));
+  const reminder = await getHoldingsEarningsReminder();
+  return reminder ? `${brief}\n\n${reminder}` : brief;
 }
 
-async function fetchSp100Earnings() {
+// 아침 브리핑(KST) 시점의 미국 현지 날짜는 KST 날짜보다 하루 전이라, 발표일이 "오늘(KST 날짜)"이면
+// 미국 현지 기준으로는 내일 발표다 — 그래서 이 날 아침에 "실적 발표 전날" 알림을 붙인다.
+// 부가 기능이라 실패해도 브리핑 본문은 그대로 나간다.
+async function getHoldingsEarningsReminder() {
+  const holdings = new Set(getHoldings());
+  if (holdings.size === 0) return "";
+  try {
+    const rows = await fetchEarningsRows();
+    const { dateStr: todayKst } = nowInKST();
+    const due = rows.filter((r) => holdings.has(r.symbol) && toCompactDate(r.reportDate) === todayKst);
+    if (due.length === 0) return "";
+    const lines = due.map((r) => `- ${r.symbol} (${r.name}) · 미국 현지 내일(${r.reportDate}) 발표${formatEarningsTime(r.timeOfTheDay)}`);
+    return `⏰ 보유 종목 실적 발표 임박\n${lines.join("\n")}`;
+  } catch (err) {
+    console.error("[stock] 보유 종목 실적 알림 생성 실패:", err.message);
+    return "";
+  }
+}
+
+function formatEarningsTime(timeOfTheDay) {
+  if (timeOfTheDay === "pre-market") return " (장 시작 전)";
+  if (timeOfTheDay === "post-market") return " (장 마감 후)";
+  return "";
+}
+
+// 같은 날 월요일 프리뷰와 임박 알림이 각각 부르므로, Alpha Vantage 일일 한도를 아끼려고 날짜별로 캐싱한다.
+let earningsCache = { dateStr: "", rows: [] };
+
+async function fetchEarningsRows() {
+  const { dateStr } = nowInKST();
+  if (earningsCache.dateStr === dateStr) return earningsCache.rows;
+
   const apiKey = requireEnv("ALPHA_VANTAGE_API_KEY");
   const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${apiKey}`;
 
@@ -276,12 +367,18 @@ async function fetchSp100Earnings() {
   );
 
   const rows = parseCsv(csv);
-  const sp100 = new Set(config.stock.sp100);
+  earningsCache = { dateStr, rows };
+  return rows;
+}
+
+async function fetchSp100Earnings() {
+  const rows = await fetchEarningsRows();
+  const watched = new Set([...config.stock.sp100, ...getHoldings()]);
   const { dateStr: todayKst } = nowInKST();
   const weekEnd = addDaysToYYYYMMDD(todayKst, 7);
 
   return rows.filter((r) => {
-    if (!sp100.has(r.symbol) || !r.reportDate) return false;
+    if (!watched.has(r.symbol) || !r.reportDate) return false;
     const reportDate = toCompactDate(r.reportDate);
     return reportDate >= todayKst && reportDate <= weekEnd;
   });
@@ -300,10 +397,10 @@ async function fetchHighImpactEvents() {
   return (events ?? []).filter((e) => e.impact === "High" && e.country === "USD");
 }
 
-function formatMondayPreview(earnings, econEvents) {
+function formatMondayPreview(earnings, econEvents, holdingSet) {
   const earningsLines =
     earnings.length > 0
-      ? earnings.map((e) => `- ${e.symbol} (${e.name}) · ${e.reportDate}`)
+      ? earnings.map((e) => `- ${holdingSet.has(e.symbol) ? "⭐ " : ""}${e.symbol} (${e.name}) · ${e.reportDate}${formatEarningsTime(e.timeOfTheDay)}`)
       : ["특이 일정 없음"];
 
   const econLines =

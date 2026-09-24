@@ -183,6 +183,26 @@ body{margin:0;background:oklch(96% 0.008 70);}
   </div>
   <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:20px;">"예정:" 줄은 기사에 앞으로의 일정 표현이 있을 때만 통과 · 지수 등락 반복 금지 · 기사에 없는 수치 금지 · 개인/가족용 전제(원문 저작권 문구 때문에 공개 서비스로 확장 불가)</div>
 
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-left:12px;">
+    <div style="font-size:10.5px;color:oklch(45% 0.01 60);background:oklch(93% 0.008 60);border-radius:12px;padding:4px 9px;white-space:nowrap;">화~일 · 내 보유 종목 (패턴 A)</div>
+    <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
+    <div style="width:200px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">서버 .env의 HOLDINGS 티커</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">코드/config에는 종목 없음 · 비면 섹션 생략</div>
+    </div>
+    <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
+    <div style="width:210px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">지수와 같은 Twelve Data 호출</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">화~토 전일 대비 · 일 주간(지난 금요일 종가 대비)</div>
+    </div>
+    <div style="font-size:14px;color:oklch(60% 0.01 60);">→</div>
+    <div style="width:210px;background:oklch(99.3% 0.003 70);border:1.5px solid oklch(82% 0.006 60);border-radius:8px;padding:7px 9px;text-align:center;">
+      <div style="font-size:12px;font-weight:600;">실적 발표 전날 알림</div>
+      <div style="font-size:9.5px;color:oklch(48% 0.01 60);margin-top:2px;">Alpha Vantage 일정 · 발표 전날 아침에 ⏰ 추가</div>
+    </div>
+  </div>
+  <div style="font-size:11px;color:oklch(48% 0.01 60);margin-bottom:20px;">월요일 프리뷰의 실적 목록에는 보유 종목도 ⭐로 포함 · 무료 티어 분당 8크레딧이라 8개씩 끊어 호출</div>
+
   <!-- ROW 1-B: 일요일 주간 요약 -->
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-left:12px;">
     <div style="font-size:12.5px;font-weight:700;color:oklch(45% 0.01 60);">1-B. 일요일 주간 요약 (패턴 A)</div>
