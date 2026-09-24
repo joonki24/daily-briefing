@@ -43,9 +43,7 @@ curl -X POST localhost:3000/test/morning   # 아침 브리핑 즉시 실행
 curl -X POST localhost:3000/test/evening   # 저녁 브리핑 즉시 실행
 ```
 
-- `npm test`, `npm run test:morning`, `npm run test:evening` 스크립트는 `package.json`에
-  등록되어 있지만 대상 파일(`src/scripts/testMorning.js` 등)이 존재하지 않아 **현재 깨져 있음**.
-  자동화된 테스트가 생기기 전까지는 위 curl 명령으로 수동 검증한다.
+- 자동화된 테스트는 아직 없다. 위 curl 명령으로 수동 검증한다.
 - Playwright 브라우저가 없으면 `npx playwright install chromium`을 먼저 실행한다.
 
 ## 아키텍처 원칙 (재설계 시 지킬 것)
