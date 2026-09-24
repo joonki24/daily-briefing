@@ -57,9 +57,9 @@ export async function fetchTransitRoute(fromLat, fromLon, toLat, toLon) {
   const steps = (best.subPath ?? [])
     .map((s) => {
       // trafficType: 1=지하철, 2=버스, 3=도보
-      if (s.trafficType === 1) return `지하철 ${s.lane?.[0]?.name ?? ""} (${s.startName}→${s.endName}, ${s.stationCount}개역)`;
-      if (s.trafficType === 2) return `버스 ${s.lane?.[0]?.busNo ?? ""} (${s.startName}→${s.endName})`;
-      if (s.trafficType === 3) return `도보 ${s.distance}m (약 ${s.sectionTime}분)`;
+      if (s.trafficType === 1) return `🚇 ${s.lane?.[0]?.name ?? "지하철"} · ${s.startName} → ${s.endName} (${s.stationCount}개역)`;
+      if (s.trafficType === 2) return `🚌 버스 ${s.lane?.[0]?.busNo ?? ""} · ${s.startName} → ${s.endName}`;
+      if (s.trafficType === 3) return `🚶 도보 ${s.distance}m (약 ${s.sectionTime}분)`;
       return null;
     })
     .filter(Boolean);
@@ -92,8 +92,7 @@ export async function getRouteBrief(fromLat, fromLon, toPlace) {
 }
 
 function formatRouteBrief(dest, route) {
-  const header = `🚌 ${dest.placeName}까지 총 ${route.totalTimeMin}분 (도보 ${route.totalWalkMeters}m 포함) · 환승 ${route.transferCount}회`;
-  const stepsLine = route.steps.join(" → ");
-  const paymentLine = `예상 요금 ${route.payment}원`;
-  return [header, stepsLine, paymentLine].join("\n");
+  const header = `${dest.placeName}까지 총 ${route.totalTimeMin}분 · 환승 ${route.transferCount}회`;
+  const walkLine = `도보 ${route.totalWalkMeters}m · 예상 요금 ${route.payment}원`;
+  return [header, walkLine, "", ...route.steps].join("\n");
 }
