@@ -34,10 +34,15 @@ export async function fetchConfiguredOutletItems() {
 
   let scrapeResults = [];
   if (scrapeOutlets.length > 0) {
-    // 브라우저 하나를 공유해서 순서대로 방문 (매번 새로 띄우면 느리고 리소스 낭비)
-    scrapeResults = await withBrowser((browser) =>
-      Promise.allSettled(scrapeOutlets.map((o) => fetchScrapeOutlet(browser, o)))
-    );
+    // 브라우저 하나를 공유해서 순서대로 방문 (매번 새로 띄우면 느리고 리소스 낭비).
+    // 페이지를 동시에 여러 개 열면 CPU/메모리가 약한 서버에서 전부 시간 초과가 나서 하나씩 처리한다.
+    scrapeResults = await withBrowser(async (browser) => {
+      const results = [];
+      for (const outlet of scrapeOutlets) {
+        results.push(...(await Promise.allSettled([fetchScrapeOutlet(browser, outlet)])));
+      }
+      return results;
+    });
   }
 
   const paired = [
