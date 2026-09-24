@@ -1,0 +1,45 @@
+{
+  "timezone": "Asia/Seoul",
+
+  "morning": {
+    "enabled": true,
+    "time": "09:00",
+    "_설명": "매일 이 시각(HH:mm, 위 timezone 기준)에 미국 증시 요약을 자동 발송합니다."
+  },
+
+  "evening": {
+    "enabled": true,
+    "time": "19:00",
+    "_설명": "매일 이 시각에 국내 뉴스 요약을 자동 발송합니다."
+  },
+
+  "newsOutlets": [
+    { "name": "SBS", "type": "rss", "rss": "https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER" },
+    { "name": "한국경제", "type": "rss", "rss": "https://www.hankyung.com/feed/all-news" },
+    { "name": "MBC", "type": "scrape", "url": "https://imnews.imbc.com" },
+    { "name": "KBS", "type": "scrape", "url": "https://news.kbs.co.kr" },
+    { "name": "연합뉴스", "type": "scrape", "url": "https://www.yna.co.kr" },
+    { "name": "채널A", "type": "scrape", "url": "https://news.ichannela.com" },
+    { "name": "JTBC", "type": "scrape", "url": "https://news.jtbc.co.kr" }
+  ],
+  "_newsOutlets_설명": "type이 'rss'면 RSS 주소(rss)를 그대로 파싱하고, 'scrape'면 url을 브라우저로 직접 렌더링해서 화면에 보이는 텍스트를 긁어온 뒤 Gemini가 그중 실제 뉴스만 골라 요약합니다. SBS/한국경제는 실제 작동하는 RSS를 확인해서 넣었고, MBC/KBS/연합뉴스/채널A/JTBC는 공개 RSS가 없어 스크레이핑 방식입니다 — 사이트 구조가 바뀌면 실패할 수 있으니 README의 '7번 항목'을 참고해 점검하세요.",
+
+  "newsCategories": ["정치", "사회", "경제", "스포츠", "연예"],
+
+  "stockSource": {
+    "name": "SAVE (saveticker.com)",
+    "url": "https://www.saveticker.com/news",
+    "_주의": "SAVE는 공식 공개 API/RSS가 없어 웹페이지를 직접 읽어옵니다(브라우저 자동화). 사이트 구조가 바뀌면 src/services/stockSave.js의 선택자(selector)를 갱신해야 합니다."
+  },
+
+  "home": {
+    "_설명": "기본 출발지. .env의 HOME_LAT/HOME_LON을 사용합니다. 여러 출발지가 필요하면 이 파일에 추가해 확장하세요."
+  },
+
+  "transitMode": "public_transit",
+
+  "notify": {
+    "method": "ntfy",
+    "_설명": "morning/evening 자동 브리핑의 발송 채널. 현재는 ntfy.sh만 구현되어 있습니다."
+  }
+}

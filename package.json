@@ -1,0 +1,24 @@
+{
+  "name": "personal-briefing",
+  "version": "0.1.0",
+  "description": "아침 미국 증시 / 외출 준비 날씨·경로 / 저녁 국내 뉴스 브리핑 개인 자동화 서버",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test:morning": "node src/scripts/testMorning.js",
+    "test:evening": "node src/scripts/testEvening.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.48.0",
+    "rss-parser": "^3.13.0"
+  }
+}
