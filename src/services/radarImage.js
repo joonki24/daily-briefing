@@ -1,5 +1,5 @@
 // 기상청 레이더 합성영상. 비/눈 예보 시 외출 준비 브리핑에 곁들이는 부가 기능.
-// 주의: getCmpImg가 주는 파일명으로 만든 실제 이미지 URL(www.kma.go.kr/repositary/...)은
+// 주의: getCmpImg가 주는 이미지 URL(www.kma.go.kr/repositary/...)은
 // 인증키 없이 공개 접근되므로, 목록 조회에만 서비스키가 필요하다.
 
 import { withRetry } from "../utils/retry.js";
@@ -49,8 +49,11 @@ export async function getLatestRadarImageUrl() {
       return undefined;
     }
 
+    // API가 파일명이 아니라 "http://www.kma.go.kr/.../RDR_CMP_WRC_*.png" 전체 URL을 준다.
+    // 그 앞에 기본 주소를 또 붙이면 존재하지 않는 파일이라 기상청이 HTML 페이지를 돌려준다.
     const latest = filenames[filenames.length - 1];
-    return `${IMAGE_BASE_URL}/${latest}`;
+    const fileName = latest.slice(latest.lastIndexOf("/") + 1);
+    return `${IMAGE_BASE_URL}/${fileName}`;
   } catch (err) {
     console.warn("[radarImage] 레이더 이미지 조회 실패 (부가 기능이라 무시):", err.message);
     return undefined;
