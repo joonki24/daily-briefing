@@ -111,17 +111,23 @@ ${brief.message}` : brief.message;
       const partial = !routeOk || !weatherOk;
 
       // 비/눈이 예보된 경우에만 레이더 이미지 조회 — 부가 기능이라 실패해도 본 응답에 영향 없게.
-      const radarImageUrl =
-        weatherOk && weatherSettled.value.hasPrecipitation
-          ? await getLatestRadarImageUrl().catch(() => undefined)
-          : undefined;
+      const wantsRadar = weatherOk && weatherSettled.value.hasPrecipitation;
+      const radarImageUrl = wantsRadar
+        ? await getLatestRadarImageUrl().catch(() => undefined)
+        : undefined;
+      const radarMissing = wantsRadar && !radarImageUrl;
+
+      const notes = [
+        partial ? (routeOk ? "날씨 실패" : "경로 실패") : undefined,
+        radarMissing ? "레이더 이미지 없음" : undefined,
+      ].filter(Boolean);
 
       logRun({
         pipeline: "depart",
         trigger: "request",
         status: partial ? "degraded" : "success",
         durationMs: Date.now() - startedAt,
-        note: partial ? (routeOk ? "날씨 실패" : "경로 실패") : undefined,
+        note: notes.length > 0 ? notes.join(", ") : undefined,
       });
 
       // 단축어는 이 응답의 텍스트를 그대로 "알림 표시"에 넣어 쓰면 됨.

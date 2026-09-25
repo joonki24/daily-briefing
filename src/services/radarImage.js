@@ -6,7 +6,7 @@ import { withRetry } from "../utils/retry.js";
 import { nowInKST } from "../utils/kst.js";
 
 const LIST_URL = "https://apis.data.go.kr/1360000/RadarImgInfoService/getCmpImg";
-const IMAGE_BASE_URL = "http://www.kma.go.kr/repositary/image/rdr/img";
+const IMAGE_BASE_URL = "https://www.kma.go.kr/repositary/image/rdr/img";
 
 /**
  * 오늘(KST) 생성된 레이더 합성영상 중 가장 최근 것의 URL을 반환.
@@ -14,7 +14,10 @@ const IMAGE_BASE_URL = "http://www.kma.go.kr/repositary/image/rdr/img";
  */
 export async function getLatestRadarImageUrl() {
   const apiKey = process.env.KMA_RADAR_SERVICE_KEY;
-  if (!apiKey) return undefined;
+  if (!apiKey) {
+    console.warn("[radarImage] KMA_RADAR_SERVICE_KEY가 설정되지 않아 레이더 이미지를 건너뜁니다.");
+    return undefined;
+  }
 
   try {
     const { dateStr } = nowInKST();
@@ -41,7 +44,10 @@ export async function getLatestRadarImageUrl() {
       { backoffMs: [2000, 5000] }
     );
 
-    if (filenames.length === 0) return undefined;
+    if (filenames.length === 0) {
+      console.warn("[radarImage] 오늘 날짜의 레이더 영상 목록이 비어 있습니다.");
+      return undefined;
+    }
 
     const latest = filenames[filenames.length - 1];
     return `${IMAGE_BASE_URL}/${latest}`;
