@@ -85,7 +85,7 @@ function formatHoldingLine(symbol, q, prefix) {
 
 // ── 시장 이슈 요약 (뉴스 기사 → Claude, 실패하면 undefined) ─────
 // 개인/가족용 전제: 하루 한 번 가장 관련 있는 기사 몇 개만 읽고, 본문은 저장·전달하지 않으며
-// 요약에만 쓴다. 결과에는 출처를 표기한다 (연합뉴스 기사 하단에 무단전재·AI 활용 금지 문구가 있어
+// 요약에만 쓴다. 출처 표기는 짧게 보내려고 뺐다 (연합뉴스 기사 하단에 무단전재·AI 활용 금지 문구가 있어
 // 공개 서비스로 확장하면 안 된다).
 
 const ISSUE_MAX_AGE_HOURS = 30;
@@ -109,13 +109,12 @@ async function getMarketIssues() {
     const material = picked.length > 0
       ? picked.map((a) => `[${a.source}] ${a.title}\n${a.body}`).join("\n\n")
       : candidates.slice(0, 6).map((c) => `- ${c.title}${c.snippet ? ` — ${c.snippet}` : ""}`).join("\n");
-    const sources = [...new Set((picked.length > 0 ? picked : candidates.slice(0, 6)).map((a) => a.source))];
 
     const instruction = `아래는 어제 미국 증시(한국 시각 오늘 새벽 마감)를 다룬 뉴스 기사야.
-이 내용만 근거로, 출근 전에 30초 안에 훑어볼 "시장 이슈" 요약을 3~4줄로 만들어줘. 길게 쓰지 말고 가장 중요한 것만.
+이 내용만 근거로, 출근 전에 30초 안에 훑어볼 "시장 이슈" 요약을 2~3줄로 만들어줘. 길게 쓰지 말고 가장 중요한 것만.
 
 규칙:
-- 각 줄은 "- "로 시작하고 40자 안팎(최대 60자). 기사 문장을 그대로 옮기지 말고 사실만 짧게 재정리하고, 어색하거나 겹치는 표현은 쓰지 마.
+- 각 줄은 "- "로 시작하고 30자 안팎(최대 45자). 기사 문장을 그대로 옮기지 말고 사실만 짧게 재정리하고, 어색하거나 겹치는 표현은 쓰지 마.
 - 왜 움직였는지(원인) → 금리·유가 등 핵심 수치 → 눈에 띈 종목/업종 → 예정된 주요 이벤트 순으로, 기사에 있는 것만.
 - 기사에 없는 사실·수치는 절대 쓰지 마. 확실하지 않으면 그 줄을 빼.
 - 지수가 올랐다/내렸다는 사실과 등락률(%)은 위에 따로 표시되니 반복하지 마. "왜" 그랬는지와 그 근거(금리·유가·종목·발언 등)만 써.
@@ -131,8 +130,8 @@ async function getMarketIssues() {
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l.startsWith("- ") && (hasDate || !l.startsWith("- 예정")));
-    if (lines.length < 2 || lines.length > 6) return undefined;
-    return `${lines.join("\n")}\n(출처: ${sources.join("·")})`;
+    if (lines.length < 2 || lines.length > 4) return undefined;
+    return lines.join("\n");
   } catch (err) {
     console.warn("[stock] 시장 이슈 요약 실패 (지수 브리핑만 발송):", err.message);
     return undefined;
