@@ -6,7 +6,8 @@
 // 요일별 분기 (한국 시각 기준):
 //   화~토 아침 → 전날 미국장 마감 요약 (getDailyBrief)
 //   일요일 아침 → 이번 주(월~금) 주간 요약 (getWeeklyBrief)
-//   월요일 아침 → 이번 주 실적 발표(S&P100 필터) + 경제지표(High 필터) 프리뷰 (getMondayPreviewBrief)
+//   월요일 아침 → 이번 주 실적 발표(S&P100 필터) + 경제지표(미/EU/영/일 기준금리급 이벤트 +
+//   ISM PMI 등 지정 지표) 프리뷰 (getMondayPreviewBrief)
 
 import config from "../../config.json" with { type: "json" };
 import { withRetry } from "../utils/retry.js";
@@ -18,6 +19,25 @@ import { load } from "cheerio";
 
 const TWELVE_DATA_BASE = "https://api.twelvedata.com";
 const FOREXFACTORY_CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+
+// 월요일 프리뷰에서 country 필터로 잡을 대상. 한국은행 기준금리는 이 무료 피드에 KRW 코드
+// 자체가 없어서 아직 못 넣는다 (2026-09-28 확인) — 다른 소스 조사 후 추가 예정.
+const PREVIEW_COUNTRIES = new Set(["USD", "EUR", "GBP", "JPY"]);
+
+// ForexFactory의 impact 등급(High/Medium/Low)이 사용자가 실제로 챙겨보는 지표 중요도와
+// 안 맞는 경우가 있어서(예: ISM PMI/ADP/JOLTS/소비자신뢰지수/EIA 원유재고가 전부 Medium 이하),
+// 이 제목들은 impact 등급과 무관하게 무조건 포함한다. 2026-09-28 실제 피드 조회로 확인한 제목.
+const ALWAYS_INCLUDE_TITLES = new Set([
+  "ISM Manufacturing PMI",
+  "ISM Services PMI",
+  "Final Manufacturing PMI", // S&P Global 제조업 PMI
+  "Final Services PMI", // S&P Global 서비스업 PMI
+  "ADP Non-Farm Employment Change",
+  "JOLTS Job Openings",
+  "CB Consumer Confidence",
+  "Unemployment Claims",
+  "Crude Oil Inventories",
+]);
 
 export async function getMorningStockBrief() {
   const { weekday } = nowInKST();
@@ -311,9 +331,61 @@ async function getMondayPreviewBrief() {
     fetchSp100Earnings(),
     fetchHighImpactEvents(),
   ]);
-  const brief = formatMondayPreview(earnings, econEvents, new Set(getHoldings()));
+  const holdings = new Set(getHoldings());
+  const enrichedEarnings = await attachEarningsPreviewNotes(earnings, holdings);
+  const brief = formatMondayPreview(enrichedEarnings, econEvents, holdings);
   const reminder = await getHoldingsEarningsReminder();
   return reminder ? `${brief}\n\n${reminder}` : brief;
+}
+
+// 보유 종목만 뉴스 기반 "관전 포인트"를 붙인다 (S&P100 전체에 붙이면 커버리지도 낮고
+// LLM 호출/실패 지점만 늘어남). 종목별로 실패해도 다른 종목·본문에는 영향 없음.
+async function attachEarningsPreviewNotes(earnings, holdings) {
+  const results = await Promise.allSettled(
+    earnings.map(async (e) => {
+      if (!holdings.has(e.symbol)) return e;
+      const note = await fetchEarningsPreviewNote(e.symbol, e.name);
+      return note ? { ...e, previewNote: note } : e;
+    })
+  );
+  return results.map((r, i) => (r.status === "fulfilled" ? r.value : earnings[i]));
+}
+
+const EARNINGS_PREVIEW_MAX_ITEMS = 8;
+
+// 구글 뉴스 RSS(정식 RSS 엔드포인트, 스크레이핑 아님)에서 종목명으로 검색해 다가올 실적
+// 발표의 "관전 포인트"를 Claude로 뽑는다. 관련 기사가 없거나 전부 지난 분기 얘기면 undefined —
+// 그 종목 줄만 조용히 빠지고 브리핑 나머지는 그대로 나간다.
+async function fetchEarningsPreviewNote(symbol, name) {
+  try {
+    const parser = new Parser({ timeout: 10000 });
+    const query = encodeURIComponent(`${name} earnings preview`);
+    const feed = await parser.parseURL(
+      `https://news.google.com/rss/search?q=${query}+when:14d&hl=en-US&gl=US&ceid=US:en`
+    );
+    const items = (feed.items ?? []).slice(0, EARNINGS_PREVIEW_MAX_ITEMS);
+    if (items.length === 0) return undefined;
+
+    const material = items
+      .map((it) => `- ${(it.title ?? "").trim()}${it.contentSnippet ? ` — ${it.contentSnippet.slice(0, 150)}` : ""}`)
+      .join("\n");
+
+    const instruction = `아래는 "${name}(${symbol})"의 다가올 실적 발표 관련 뉴스 기사 제목들이야.
+이 중 앞으로 있을 실적 발표에서 "무엇을 주목해서 봐야 하는지"(예: 특정 사업부 매출, 가이던스, 마진 등)를
+알려주는 내용이 있으면 딱 한 줄로 요약해줘 ("관전 포인트: "로 시작, 40자 안팎).
+
+규칙:
+- 지난 분기 실적 발표 결과(이미 끝난 얘기)는 무시하고, 앞으로 있을 발표에 대한 내용만 써.
+- 기사에 없는 수치·사실은 절대 지어내지 마.
+- 관전 포인트로 쓸 만한 내용이 하나도 없으면 "없음" 한 단어만 출력해.`;
+
+    const text = (await summarize(instruction, material)).trim();
+    if (!text || text === "없음" || !text.startsWith("관전 포인트")) return undefined;
+    return text;
+  } catch (err) {
+    console.warn(`[stock] ${symbol} 실적 프리뷰 요약 실패:`, err.message);
+    return undefined;
+  }
 }
 
 // 아침 브리핑(KST) 시점의 미국 현지 날짜는 KST 날짜보다 하루 전이라, 발표일이 "오늘(KST 날짜)"이면
@@ -339,6 +411,22 @@ function formatEarningsTime(timeOfTheDay) {
   if (timeOfTheDay === "pre-market") return " (장 시작 전)";
   if (timeOfTheDay === "post-market") return " (장 마감 후)";
   return "";
+}
+
+// Alpha Vantage EARNINGS_CALENDAR의 EPS 컨센서스 추정치. 값이 없는 종목(특히 소형주)이 많아
+// 있을 때만 붙인다.
+function formatEpsEstimate(estimate, currency) {
+  if (!estimate) return "";
+  return ` · EPS 컨센서스 ${estimate}${currency ?? ""}`;
+}
+
+// ForexFactory의 forecast/previous. 회의록·연설처럼 수치가 없는 이벤트는 빈 문자열이라 생략한다.
+function formatForecastGuide(forecast, previous) {
+  if (!forecast && !previous) return "";
+  const parts = [];
+  if (forecast) parts.push(`예상 ${forecast}`);
+  if (previous) parts.push(`전월 ${previous}`);
+  return ` (${parts.join(" · ")})`;
 }
 
 // 같은 날 월요일 프리뷰와 임박 알림이 각각 부르므로, Alpha Vantage 일일 한도를 아끼려고 날짜별로 캐싱한다.
@@ -393,18 +481,27 @@ async function fetchHighImpactEvents() {
     { backoffMs: [2000, 5000] }
   );
 
-  return (events ?? []).filter((e) => e.impact === "High" && e.country === "USD");
+  return (events ?? []).filter((e) => {
+    if (!PREVIEW_COUNTRIES.has(e.country)) return false;
+    return e.impact === "High" || ALWAYS_INCLUDE_TITLES.has(e.title);
+  });
 }
 
 function formatMondayPreview(earnings, econEvents, holdingSet) {
   const earningsLines =
     earnings.length > 0
-      ? earnings.map((e) => `- ${holdingSet.has(e.symbol) ? "⭐ " : ""}${e.symbol} (${e.name}) · ${e.reportDate}${formatEarningsTime(e.timeOfTheDay)}`)
+      ? earnings.flatMap((e) => {
+          const main = `- ${holdingSet.has(e.symbol) ? "⭐ " : ""}${e.symbol} (${e.name}) · ${e.reportDate}${formatEarningsTime(e.timeOfTheDay)}${formatEpsEstimate(e.estimate, e.currency)}`;
+          return e.previewNote ? [main, `  ${e.previewNote}`] : [main];
+        })
       : ["특이 일정 없음"];
 
   const econLines =
     econEvents.length > 0
-      ? econEvents.map((e) => `- ${e.title} · ${formatEventDate(e.date)}`)
+      ? econEvents.map(
+          (e) =>
+            `- ${e.country !== "USD" ? `[${e.country}] ` : ""}${e.title} · ${formatEventDate(e.date)}${formatForecastGuide(e.forecast, e.previous)}`
+        )
       : ["특이 일정 없음"];
 
   return [

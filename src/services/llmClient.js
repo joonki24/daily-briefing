@@ -54,7 +54,9 @@ export async function summarize(instruction, raw) {
 function isRetryableError(err) {
   if (err instanceof Anthropic.RateLimitError) return true;
   if (err instanceof Anthropic.APIConnectionError) return true;
-  if (err instanceof Anthropic.APIStatusError) return err.status >= 500;
+  // SDK 0.32.1에는 APIStatusError가 없다 — 상태 코드가 붙는 API 에러는 전부 APIError를 상속하므로
+  // 그걸로 5xx만 재시도한다. (없는 클래스를 instanceof하면 TypeError가 나서 원래 에러를 가려버렸다.)
+  if (err instanceof Anthropic.APIError) return err.status >= 500;
   return false;
 }
 
