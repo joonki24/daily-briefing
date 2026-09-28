@@ -32,6 +32,28 @@
 > 남은 것은 ③부터. 원래 합의된 순서: ① Oracle Cloud 배포 ② 외부 주소 ③ 단축어 2개 신규 제작(외출 준비용 +
 > ntfy 대체용) + 레이더 이미지 단계 포함 ④ `config.json` 조정 ⑤ ODsay 캐싱 ⑥ 설정 핫리로드.
 
+> **오라클 인스턴스(`daily-briefing`, IP `150.230.211.135`) SSH 키 분실 (2026-09-28).** 원본 키파일을
+> 로컬 PC 다운로드 폴더에서 못 찾음 — 다른 노트북에 있을 가능성 있어서 찾는 중. 그동안 시도했지만
+> **안 된 방법들**(다시 시도할 필요 없음):
+> - **OCI Run Command(Cloud Agent)**: 처음엔 Dynamic Group(`agent-cmd-dg`)의 matching rule이
+>   `instance.id = "` 상태로 인스턴스 OCID가 비어있어서 권한이 전혀 적용 안 되고 있었음 → OCID 채워서
+>   고쳤지만(`instance.id = 'ocid1.instance.oc1.ap-tokyo-1.anxhiljrvj6xnjycvevibe6qeeym6lfxgpezzygazld7oek6b4zy4bz6poia'`),
+>   Policy(`agent-cmd-policy`, "Allow dynamic-group 'Default'/'agent-cmd-dg' to use
+>   instance-agent-command-execution-family in tenancy")는 원래 정상이었는데도, 플러그인 재시작까지
+>   해봤지만 명령이 계속 "Visible/Accepted"에서 안 넘어감 — 구조적으로 막혀있는 것으로 보고 포기.
+> - **GRUB 인터럽트로 재부팅 중 루트 진입**: 이 이미지는 GRUB 타임아웃이 0이라 콘솔에서 키를 눌러도
+>   못 멈춤. Cloud Shell 시리얼 콘솔 자체는 정상 작동함(`ubuntu` 계정 로그인 프롬프트까지는 뜨나
+>   비밀번호가 없어서 못 들어감).
+> - **부트 볼륨 분리 후 임시 인스턴스에 마운트**: 방법은 확인했지만 실행 안 함(번거로워서 보류).
+>
+> **결정 (2026-09-28): 이 인스턴스를 복구하지 않고 새 인스턴스로 이전하기로 함.** "임시" 인스턴스가
+> 아니라 그걸 새 정식 서버로 씀. 새로 만든 SSH 공개키(`~/.ssh/daily_briefing_oracle.pub`, 로컬 PC)는
+> 이 인스턴스엔 결국 등록 못 함 — 새 인스턴스 만들 때 이 키(또는 새로 만드는 키)로 등록하면 됨.
+> **이전 시 체크리스트**: ① 새 인스턴스 생성(Ubuntu 22.04, Always Free, 새 SSH 키) ② `git clone` +
+> 기존 `.env` scp로 복사 ③ `deploy/setup-ubuntu.sh` 실행 ④ 공인 IP가 바뀌므로 ODsay Server IP
+> 재등록 + sslip.io 주소/Caddy 설정 갱신 ⑤ **iOS 단축어를 새 주소로 다시 만들어야 함** ⑥ 기존
+> `daily-briefing` 인스턴스는 정리 후 Terminate.
+
 ## 빌드 / 실행 / 테스트 명령
 
 ```bash
